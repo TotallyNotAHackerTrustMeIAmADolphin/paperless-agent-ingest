@@ -138,7 +138,10 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
     `work/inbox/<id>/original.pdf` and `meta.json` (metadata snapshot without `content`).
     Raw image uploads (JPEG/PNG/TIFF...) are converted to a one-page PDF in place (a `.jpeg`
     saved as `.pdf` once crashed `prepare` with "unable to find trailer dictionary").
-  - `prepare`: same untouched check from `meta.json`; born-digital files skip the render/OSD
+  - `prepare`: skips every `work/inbox/` folder whose id is not in the *live* untouched set
+    (same query as `fetch`); `meta.json` is only the metadata snapshot for the report, never
+    the untouched check (a stale snapshot still carrying the inbox tag once re-OCR'd an
+    already-applied 14-page bundle on every run); born-digital files skip the render/OSD
     pass entirely; everything per document sits inside one try/except so a corrupt file prints
     `FAILED preparing <id>` and the rest of the report survives (keep every `pdf_tools`/`ocr`
     call inside it). Writes `content.md`, `fixed.pdf`, `ocr.pdf` and the report.

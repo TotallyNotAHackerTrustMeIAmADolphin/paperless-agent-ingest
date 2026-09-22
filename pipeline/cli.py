@@ -70,11 +70,6 @@ def _untouched_documents():
             yield doc
 
 
-def _is_untouched(meta: dict, inbox_ids: set[int]) -> bool:
-    has_inbox_tag = bool(inbox_ids & set(meta.get("tags", [])))
-    return has_inbox_tag or not (meta.get("correspondent") or meta.get("document_type"))
-
-
 def fetch():
     n = 0
     for d in _untouched_documents():
@@ -135,7 +130,10 @@ def _duplicate_candidates(content: str, own_id=None) -> list[dict]:
 
 
 def _load_meta(doc_dir: Path, doc_id):
-    """meta.json written by fetch(), else a live lookup (None if the doc is gone)."""
+    """Metadata snapshot for the report: meta.json written by fetch(), else a live lookup
+    (None if the doc is gone). This is NOT the untouched check - the snapshot is stale as soon
+    as apply() has run (a folder whose meta.json still carries the inbox tag got re-OCR'd on
+    every later prepare, doc 391 on 2026-09-22); prepare() decides against the live set."""
     meta_path = doc_dir / "meta.json"
     if meta_path.exists():
         return json.loads(meta_path.read_text(encoding="utf-8"))
@@ -165,7 +163,10 @@ def _named_suggestions(doc_id: int, names: dict[str, dict[int, str]]) -> dict:
 
 def prepare():
     report = []
-    inbox_ids = client.inbox_tag_ids()
+    # The one source of truth for "still to do": the same live query fetch() uses. work/inbox/
+    # keeps every folder ever fetched (originals are never deleted), so anything not in this
+    # set has been applied, deleted or classified since and must be skipped.
+    live_untouched = {d["id"] for d in _untouched_documents()}
     names = {
         "correspondents": {c["id"]: c["name"] for c in client.list_correspondents()},
         "document_types": {t["id"]: t["name"] for t in client.list_document_types()},
@@ -185,12 +186,12 @@ def prepare():
 
         meta = None
         if is_paperless:
+            if doc_id not in live_untouched:
+                print(f"skip {doc_id}: not untouched in Paperless any more (already processed)")
+                continue
             meta = _load_meta(doc_dir, doc_id)
             if meta is None:
                 print(f"skip {doc_id}: no longer in Paperless (already processed)")
-                continue
-            if not _is_untouched(meta, inbox_ids):
-                print(f"skip {doc_id}: already classified in Paperless")
                 continue
 
         # Everything that touches the file stays inside this try: one bad document (corrupt/
