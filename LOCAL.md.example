@@ -1,0 +1,39 @@
+# LOCAL.md
+
+Everything specific to *this* checkout and its owner. Gitignored: it may contain server
+addresses, names, employers, document ids and anything else you would not publish. Agents read
+it after `AGENTS.md`; rules here override the defaults there. Copy this file to `LOCAL.md` and
+fill in what you know; sections you leave empty are fine.
+
+## Instance
+
+- Paperless version, reachable URLs (the token itself stays in `.env`).
+- Inbox tag name and id.
+- Anything unusual about the configuration (duplicate handling, archive generation, ...).
+
+## Conventions on this instance
+
+- Operating mode if not fully automatic (e.g. "ask before apply").
+- Document language and title pattern if different from `<What> (<Who>) - DD.MM.YYYY`.
+- Name of the duplicate tag (default `Duplikat-Verdacht`).
+- Spelling conventions for correspondents and tags (umlauts vs. ASCII, abbreviations).
+- Known inconsistencies that must NOT be cleaned up (two tags meaning the same thing, ...).
+- Preferred document types and what they cover.
+
+## About the owner and their documents
+
+- Who the documents belong to (name as it appears on letters), addresses that recur.
+- Recurring correspondents and how their documents look (employers, insurers, authorities).
+- Known bundle patterns (payroll exports, onboarding packets) and how to split them.
+- Open gaps the owner has confirmed (a document that is expected but not in Paperless yet).
+
+## Machine-specific setup notes
+
+- Where Tesseract/Ghostscript/poppler live, `TESSDATA_PREFIX`, anything that took a while
+  to get working.
+
+## Incident log
+
+One line per run with the date and what was learned. Newest at the bottom.
+
+- YYYY-MM-DD: ...

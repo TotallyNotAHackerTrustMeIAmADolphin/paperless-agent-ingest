@@ -1,0 +1,24 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+# work/ is scratch (see CLAUDE.md) and holds real personal documents - ignore everything under it
+# except .gitkeep placeholders, regardless of subfolder (inbox/, processed/, review/, archive/,
+# qa/, or loose files directly in work/). The two negations keep directory traversal alive so git
+# can still find nested .gitkeep files inside otherwise-ignored folders.
+work/**
+!work/**/
+!work/**/.gitkeep
+*.log
+
+# ad-hoc debug-render scratch dirs outside work/ (e.g. page_check/) - same category as work/,
+# just not nested under it
+page_check/
+
+
+# handoff doc for external agents - contains a live API token, never commit
+AGENT_HANDOFF.md
+
+# per-checkout notes for agents (instance URLs, owner details, incident log) - never commit
+LOCAL.md

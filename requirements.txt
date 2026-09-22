@@ -1,0 +1,10 @@
+requests>=2.31
+python-dotenv>=1.0
+pypdf>=4.0
+pikepdf>=8.0
+pdf2image>=1.17
+ocrmypdf>=16.0
+Pillow>=10.0
+pytesseract>=0.3.10
+tqdm>=4.66
+pymupdf>=1.24
