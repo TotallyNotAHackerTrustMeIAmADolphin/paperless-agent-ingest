@@ -256,3 +256,20 @@ judgment worth repeating) goes **into `LOCAL.md`**, with concrete ids and dates 
 Anything that is true for every Paperless instance goes into this file instead, in the section
 it belongs to, in generic wording. Before ending a session, check whether anything came up
 that is not already written down.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues (`gh` CLI); the repo is public, so tickets carry no
+instance details. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`,
+`wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root, created lazily. See
+`docs/agents/domain.md`.

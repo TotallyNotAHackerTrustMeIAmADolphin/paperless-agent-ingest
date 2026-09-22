@@ -143,6 +143,7 @@ pipeline/
   selftest.py         live round-trip test of every write path (throwaway documents)
   check_connection.py smoke test for .env
 docs/
+  agents/             issue tracker, triage labels and domain-doc conventions for agent skills
   ingest-prompt.md    the prompt the runner scripts hand to the agent
   review-2026-09-22.md  (German) Paperless 3.1 capabilities vs. this pipeline, design rationale
 AGENTS.md             agent instructions (generic)
