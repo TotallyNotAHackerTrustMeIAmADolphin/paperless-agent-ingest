@@ -130,19 +130,36 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
 - `form_fill.py` - overlays text/checkmarks/a signature onto a flat form (scanned image + OCR
   text layer, or a born-digital layout with no fillable fields) when a document needs filling in
   rather than just classifying, e.g. a blank onboarding questionnaire or self-disclosure form
-  that came back into the inbox. `find_label` locates a label by word match instead of hardcoded
-  coordinates; `fit_font_size`/`place_text` pick the largest single-line font that fits a given
-  width (prefer that over guessing a size and re-rendering, and over shrinking below
-  `MIN_LEGIBLE_SIZE` - wrap to a second line at normal size instead); `detect_row_lines` finds a
-  scanned table's gridlines by rendering and looking for dark image rows, since
-  `page.get_drawings()` finds nothing on a page that is one embedded raster; `insert_signature`
-  sizes a signature from its real aspect ratio instead of a hand-picked rect (which silently
-  clamps to whichever of width/height is tighter); `preview` renders pages for the fill ->
-  render -> look -> adjust loop this module exists to shorten. Nothing in it talks to Paperless;
-  `client.update_version` uploads the result, `client.wait_for_task` polls the task. Filling in
-  someone's signature is sensitive: do it only with the document owner's standing, explicit
-  permission for reuse (not inferred from one past one-off case), and never source a signature
-  for use on a different person's document.
+  that came back into the inbox.
+  - For a **table cell**: get the cell's full box first - `detect_row_lines` crossed with
+    `detect_col_lines` (its vertical counterpart) finds all four walls by rendering and looking
+    for image rows/columns that are mostly dark, since `page.get_drawings()` finds nothing on a
+    page that is one embedded raster with no vector paths. Then `fill_centered(page, cell_rect,
+    text)` picks the largest font that fits and centers the text both ways - no offset to get
+    right, because every wall is already known. Prefer this over placing text from one corner
+    outward with a guessed offset: in practice that approach needed several separate rounds of
+    fixes (text sitting on a gridline, a value crossing the row below it, a signature clamped to
+    roughly half its intended height) that centering in a known box avoids by construction.
+  - For anything that isn't a table cell (a labeled single-line field, a checkbox, the line above
+    a signature): `find_label` locates a label by word match instead of hardcoded coordinates -
+    but a short/common label is not automatically unique (searching a page for 'Von' once
+    silently matched the "von" inside an unrelated earlier sentence and placed a whole table's
+    dates under the wrong header with no error); pass `after_y` to disambiguate, and prefer the
+    longest substring that's still exactly what's printed. `fit_font_size`/`place_text` pick the
+    largest single-line font that fits a given width (prefer that over guessing a size and
+    re-rendering, and over shrinking below `MIN_LEGIBLE_SIZE` - wrap to a second line at normal
+    size instead). `detect_row_lines` alone (without a matching `detect_col_lines`) still finds a
+    single line's position directly, e.g. the rule above a signature, when reasoning from a
+    nearby label's offset alone isn't reliable enough.
+  - `insert_signature` sizes a signature from its real aspect ratio instead of a hand-picked rect
+    (which silently clamps to whichever of width/height is tighter). `preview` renders pages for
+    the fill -> render -> look -> adjust loop this module exists to shorten - still do this even
+    with `fill_centered`, its vertical centering is an approximation (PDF text positions by
+    baseline, not a centered box) tuned for Helvetica at ordinary form-entry sizes.
+  - Nothing in this module talks to Paperless; `client.update_version` uploads the result,
+    `client.wait_for_task` polls the task. Filling in someone's signature is sensitive: do it
+    only with the document owner's standing, explicit permission for reuse (not inferred from one
+    past one-off case), and never source a signature for use on a different person's document.
 - `ocr.py` - `needs_ocr` (< 20 extractable chars/page on average), `run_ocr` (ocrmypdf with
   `OCR_LANGUAGES`, `skip_text=True`, deskew; copies born-digital files through untouched, since
   re-OCRing a Tagged PDF only destroys its structure), `extract_text` (pymupdf per page,
