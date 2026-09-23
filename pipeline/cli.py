@@ -415,21 +415,20 @@ def apply():
 
 def _wait_for_task(task_id: str, timeout_s: int = 180):
     """Poll until the consumption task finishes. Returns the related document id on SUCCESS
-    (for an upload: the new document; for update_version: the new version's id), else None."""
-    deadline = time.time() + timeout_s
-    while time.time() < deadline:
-        task = client.get_task(task_id)
-        status = task.get("status")
-        if status == "SUCCESS":
-            related = task.get("related_document")
-            return int(related) if related is not None else None
-        if status == "FAILURE":
-            detail = task.get("result_data") or task.get("status_display")
-            print(f"task {task_id} failed: {detail}")
-            return None
-        time.sleep(2)
-    print(f"task {task_id} timed out waiting for completion")
-    return None
+    (for an upload: the new document; for update_version: the new version's id), else None.
+    Thin wrapper over client.wait_for_task that keeps this module's existing "None means
+    failed/timed out, printed already" contract instead of that function's raise-on-timeout."""
+    try:
+        task = client.wait_for_task(task_id, timeout_s=timeout_s)
+    except TimeoutError:
+        print(f"task {task_id} timed out waiting for completion")
+        return None
+    if task.get("status") == "FAILURE":
+        detail = task.get("result_data") or task.get("status_display")
+        print(f"task {task_id} failed: {detail}")
+        return None
+    related = task.get("related_document")
+    return int(related) if related is not None else None
 
 
 STAGES = {"fetch": fetch, "prepare": prepare, "apply": apply}

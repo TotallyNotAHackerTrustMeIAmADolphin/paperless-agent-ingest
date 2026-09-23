@@ -120,6 +120,22 @@ pipeline depends on. `CLAUDE.md` just points at it. Everything specific to *your
 *your* documents goes into `LOCAL.md`, which is gitignored; the agent is told to read it and to
 write what it learns back into it.
 
+## Filling in blank forms
+
+Some inbox documents are not just scans to classify but blank forms - an onboarding
+questionnaire, a self-disclosure form - that need answers written in before they go back into
+Paperless. `pipeline/form_fill.py` overlays text, checkmarks and a signature onto a flat form (a
+scanned image with an OCR text layer, or a born-digital layout with no fillable fields) without
+hardcoding pixel coordinates by hand: `find_label` locates a field by its OCR text instead of a
+guessed position, `fit_font_size`/`place_text` pick the largest font that still fits on one line,
+`detect_row_lines` finds a scanned table's gridlines by looking for dark image rows (there are no
+vector lines to find - the page is one embedded image), and `insert_signature` sizes a signature
+from its own aspect ratio instead of a hand-picked box. There is no pipeline stage for this: it's
+a library the agent calls from an interactive session (fill a field, `form_fill.preview` the
+result, adjust, repeat, then `client.update_version` once it looks right). See `AGENTS.md` for
+the full API, and keep a signature's reuse permission and any document-specific notes in
+`LOCAL.md`, never in a committed file.
+
 ## Safety properties
 
 - Nothing is ever deleted before its replacement is confirmed in Paperless. A fixed file
@@ -139,6 +155,7 @@ pipeline/
   cli.py              fetch / prepare / apply stages, stage lock
   client.py           the only HTTP code: Paperless REST API v10 wrapper
   pdf_tools.py        blank-page detection, rotation check, split/merge/assemble, rendering
+  form_fill.py        overlay text/checkmarks/a signature onto a blank scanned or flat form
   ocr.py              ocrmypdf wrapper and per-page text extraction
   selftest.py         live round-trip test of every write path (throwaway documents)
   check_connection.py smoke test for .env

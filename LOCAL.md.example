@@ -26,6 +26,9 @@ fill in what you know; sections you leave empty are fine.
 - Recurring correspondents and how their documents look (employers, insurers, authorities).
 - Known bundle patterns (payroll exports, onboarding packets) and how to split them.
 - Open gaps the owner has confirmed (a document that is expected but not in Paperless yet).
+- Whether the owner has given standing permission to reuse a signature for filling in their own
+  forms with `pipeline/form_fill.py` (default: no - treat any earlier use as one-off unless the
+  owner says otherwise), and where the signature file lives on this machine if so.
 
 ## Machine-specific setup notes
 

@@ -127,6 +127,22 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
   `page_count`. **The blank threshold false-positives on thin-lined carbon-copy forms**: a fully
   legible single-page vehicle registration form once measured 0.0026. Whenever every page of a
   short document is "blank", render and look before believing it.
+- `form_fill.py` - overlays text/checkmarks/a signature onto a flat form (scanned image + OCR
+  text layer, or a born-digital layout with no fillable fields) when a document needs filling in
+  rather than just classifying, e.g. a blank onboarding questionnaire or self-disclosure form
+  that came back into the inbox. `find_label` locates a label by word match instead of hardcoded
+  coordinates; `fit_font_size`/`place_text` pick the largest single-line font that fits a given
+  width (prefer that over guessing a size and re-rendering, and over shrinking below
+  `MIN_LEGIBLE_SIZE` - wrap to a second line at normal size instead); `detect_row_lines` finds a
+  scanned table's gridlines by rendering and looking for dark image rows, since
+  `page.get_drawings()` finds nothing on a page that is one embedded raster; `insert_signature`
+  sizes a signature from its real aspect ratio instead of a hand-picked rect (which silently
+  clamps to whichever of width/height is tighter); `preview` renders pages for the fill ->
+  render -> look -> adjust loop this module exists to shorten. Nothing in it talks to Paperless;
+  `client.update_version` uploads the result, `client.wait_for_task` polls the task. Filling in
+  someone's signature is sensitive: do it only with the document owner's standing, explicit
+  permission for reuse (not inferred from one past one-off case), and never source a signature
+  for use on a different person's document.
 - `ocr.py` - `needs_ocr` (< 20 extractable chars/page on average), `run_ocr` (ocrmypdf with
   `OCR_LANGUAGES`, `skip_text=True`, deskew; copies born-digital files through untouched, since
   re-OCRing a Tagged PDF only destroys its structure), `extract_text` (pymupdf per page,

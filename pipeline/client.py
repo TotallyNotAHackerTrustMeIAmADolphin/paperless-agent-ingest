@@ -4,6 +4,7 @@ Docs: https://docs.paperless-ngx.com/api/ - written against Paperless-ngx 3.1 / 
 (see `API_VERSION`). Everything that talks HTTP to Paperless lives here.
 """
 import hashlib
+import time
 from pathlib import Path
 
 import requests
@@ -216,6 +217,20 @@ def get_task(task_id: str) -> dict:
             related_ids[0] if related_ids else (task.get("result_data") or {}).get("document_id")
         )
     return task
+
+
+def wait_for_task(task_id: str, timeout_s: int = 180, poll_interval_s: float = 2.0) -> dict:
+    """Polls get_task until it reaches SUCCESS or FAILURE, or raises TimeoutError after
+    timeout_s. Returns the final task dict (status/related_document as get_task normalizes
+    them). Every call site that uploads or versions a document ends up wanting this same loop -
+    write it once here rather than in each calling script."""
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        task = get_task(task_id)
+        if task.get("status") in ("SUCCESS", "FAILURE"):
+            return task
+        time.sleep(poll_interval_s)
+    raise TimeoutError(f"task {task_id} did not finish within {timeout_s}s")
 
 
 def update_document(doc_id: int, **fields) -> dict:
