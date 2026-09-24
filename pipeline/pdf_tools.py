@@ -1,7 +1,9 @@
 """Local, no-network PDF mechanics: blank-page detection, rotation, split/merge."""
+import io
 from pathlib import Path
 
 import pikepdf
+import pymupdf
 import pytesseract
 from pdf2image import convert_from_path
 from PIL import Image
@@ -144,6 +146,55 @@ def assemble_pages(
                 page = dest.pages[new_index]
                 page.Rotate = (int(page.get("/Rotate", 0)) + degrees) % 360
         dest.save(out_path)
+    return out_path
+
+
+def crop_page(
+    pdf_path: Path,
+    page_number: int,
+    box: tuple[float, float, float, float],
+    rotate: int = 0,
+    dpi: int = 300,
+) -> Image.Image:
+    """Render one page and crop+rotate it in raster space. `box` is (left, top, right, bottom)
+    as fractions of the rendered page (0..1 each) rather than pixels or points, so a caller can
+    say "left half" as (0, 0, 0.5, 1) without knowing the page's pixel size. `rotate` is
+    clockwise degrees applied after the crop (same convention as `fix_pdf`/`assemble_pages`).
+
+    For recovering multiple logical A4 pages out of one oversized (A3) scan: a scanner fed at
+    the wrong tray size, or a folded certificate/booklet scanned open flat, produces one large
+    page that is actually two or more real pages side by side or stacked. There is no vector
+    way to do this safely for a scanned (image + OCR text layer) PDF - shrinking a page's
+    /MediaBox only changes what is *displayed*, the existing OCR words for the other half stay
+    in the content stream and still get extracted as text. Cropping the rendered raster instead
+    and re-OCRing each result with `pipeline.ocr.run_ocr` (see `build_pdf_from_images`) gives
+    each output page a text layer scoped to only what is actually on it."""
+    image = render_page(pdf_path, page_number, dpi=dpi)
+    width, height = image.size
+    left, top, right, bottom = box
+    cropped = image.crop(
+        (round(left * width), round(top * height), round(right * width), round(bottom * height))
+    )
+    if rotate:
+        cropped = cropped.rotate(-rotate, expand=True)  # PIL rotates counterclockwise for +angle
+    return cropped
+
+
+def build_pdf_from_images(images: list[Image.Image], out_path: Path, dpi: int) -> Path:
+    """Assemble a raster-only PDF (no text layer) from already-rendered/cropped page images, one
+    page per image, sized to the image's true physical dimensions at `dpi`. The result has no
+    text at all - pair with `pipeline.ocr.run_ocr` to get a real, page-scoped text layer."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    doc = pymupdf.open()
+    for image in images:
+        width, height = image.size
+        pt_width, pt_height = width / dpi * 72, height / dpi * 72
+        page = doc.new_page(width=pt_width, height=pt_height)
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        page.insert_image(pymupdf.Rect(0, 0, pt_width, pt_height), stream=buf.getvalue())
+    doc.save(out_path)
+    doc.close()
     return out_path
 
 

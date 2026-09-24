@@ -126,7 +126,12 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
   (contiguous 0-indexed inclusive ranges -> `part_N.pdf`), `merge_pdfs`, `render_page`,
   `page_count`. **The blank threshold false-positives on thin-lined carbon-copy forms**: a fully
   legible single-page vehicle registration form once measured 0.0026. Whenever every page of a
-  short document is "blank", render and look before believing it.
+  short document is "blank", render and look before believing it. `crop_page`/
+  `build_pdf_from_images` recover multiple logical A4 pages out of one oversized scan (an A3
+  scanner tray, or a folded certificate/booklet scanned open flat): render, crop to a
+  fractional box, rotate, rebuild a raster-only PDF, then `ocr.run_ocr` it for a text layer
+  scoped to just that page - a `/MediaBox` crop alone would leave the other half's OCR words in
+  the shared content stream, still extractable as this page's text.
 - `form_fill.py` - overlays text/checkmarks/a signature onto a flat form (scanned image + OCR
   text layer, or a born-digital layout with no fillable fields) when a document needs filling in
   rather than just classifying, e.g. a blank onboarding questionnaire or self-disclosure form
@@ -236,7 +241,14 @@ sources.
   PDF/A for files that already carry text, i.e. everything this pipeline pushes. `download/`
   without `?original=true` then serves the original. `content` is the text source.
 - **Task objects (v10):** paginated `/api/tasks/`, lower-case `status`, `related_document_ids`,
-  `result_data`, `task_type`. `client.get_task` normalizes.
+  `result_data`, `task_type`. `client.get_task` normalizes. `client._url` already prepends
+  `/api/`, so calling it with a leading-slash path (`_url("/api/tasks/")`) silently double-prefixes
+  to `/api/api/tasks/`, which Paperless's SPA catch-all answers with a 200 HTML login page, not a
+  404 - pass bare paths (`_url("tasks/")`). Listing `task_type=consume_file` tasks and filtering
+  for `status=failure` is the way to explain a scan the user says they made that never shows up
+  as a Paperless document: a folder-watch consumer that grabs a file mid-write fails with
+  `ConsumerError: ...: InputFileError:` (empty detail) and the file is simply gone from Paperless's
+  view - `fetch`/`prepare` have no way to see it since it was never a document at all.
 - **Suggestions endpoint** `GET /api/documents/{id}/suggestions/` returns classifier ids and
   candidate dates; `prepare` resolves them into the report.
 - **Server-side settings worth suggesting to the user (env only):** `PAPERLESS_IGNORE_DATES`
