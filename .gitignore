@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-# work/ is scratch (see CLAUDE.md) and holds real personal documents - ignore everything under it
+# work/ is scratch (see AGENTS.md) and holds real personal documents - ignore everything under it
 # except .gitkeep placeholders, regardless of subfolder (inbox/, processed/, review/, archive/,
 # qa/, or loose files directly in work/). The two negations keep directory traversal alive so git
 # can still find nested .gitkeep files inside otherwise-ignored folders.
@@ -20,5 +20,8 @@ page_check/
 # handoff doc for external agents - contains a live API token, never commit
 AGENT_HANDOFF.md
 
-# per-checkout notes for agents (instance URLs, owner details, incident log) - never commit
+# per-checkout notes for agents (instance URLs, owner details, incident log) - never commit.
+# Explicit names, not LOCAL*.md, so the *.example templates for these stay tracked.
 LOCAL.md
+LOCAL_KNOWLEDGE.md
+LOCAL_LOG.md

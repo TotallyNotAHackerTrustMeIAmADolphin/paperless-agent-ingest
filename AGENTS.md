@@ -3,10 +3,14 @@
 Instructions for any coding agent (Claude Code, Codex, Cursor, Copilot, Gemini CLI, Aider, ...)
 working in this repository. Rules come first, the reference material behind them follows.
 
-**Also read `LOCAL.md` if it exists.** It is gitignored and holds everything specific to the
-owner of this checkout: their Paperless instance, their naming conventions, what their
-documents look like, and a log of past runs. Rules in `LOCAL.md` override defaults given here.
-If it does not exist yet, create it from `LOCAL.md.example` on the first run.
+**Also read `LOCAL.md` and `LOCAL_KNOWLEDGE.md` if they exist.** Both are gitignored and hold
+everything specific to the owner of this checkout: `LOCAL.md` is their Paperless instance and
+naming conventions, `LOCAL_KNOWLEDGE.md` is what their documents and correspondents look like.
+Rules there override defaults given here. If they do not exist yet, create all three
+(`LOCAL.md`, `LOCAL_KNOWLEDGE.md`, `LOCAL_LOG.md`) from their `*.example` templates on the first
+run. **Do not read `LOCAL_LOG.md` (a chronological incident log) by default** - it costs context
+for no benefit on a normal run; consult it only when investigating a specific past incident, a
+bugfix, or a particular document's history (grep it for a doc id or keyword).
 
 ## 1. What this project does
 
@@ -287,7 +291,11 @@ Paperless before assuming data loss; a concurrent run probably finished the job.
 
 ## 8. Related material
 
-- `LOCAL.md` (gitignored): the owner's instance, conventions, document knowledge, incident log.
+- `LOCAL.md` (gitignored): the owner's instance and conventions. Read every run.
+- `LOCAL_KNOWLEDGE.md` (gitignored): the owner's correspondents and document patterns. Read
+  every run.
+- `LOCAL_LOG.md` (gitignored): chronological incident log. Consulted on demand only, see the
+  note at the top of this file.
 - `docs/ingest-prompt.md`: the prompt the runner scripts hand to the agent.
 - `docs/review-2026-09-22.md` (German): Paperless 3.1 capabilities vs. this pipeline and the
   reasoning behind the current design.
@@ -296,11 +304,24 @@ Paperless before assuming data loss; a concurrent run probably finished the job.
 
 Every runner-started session starts with no memory of earlier ones, and an agent's own memory
 store is tied to one machine and not in git. Anything a future session on this checkout needs
-(a Paperless or pipeline quirk, a naming decision, a data-quality finding, a classification
-judgment worth repeating) goes **into `LOCAL.md`**, with concrete ids and dates as evidence.
-Anything that is true for every Paperless instance goes into this file instead, in the section
-it belongs to, in generic wording. Before ending a session, check whether anything came up
-that is not already written down.
+goes into one of three gitignored files, with concrete ids and dates as evidence. Pick by asking
+"does a future run need this without being told to look for it?":
+
+- **`LOCAL.md`** - a standing rule or instance fact that changes how you behave on every run
+  (a naming/operating convention, an instance config quirk). Read automatically every run, so
+  keep it short.
+- **`LOCAL_KNOWLEDGE.md`** - a fact about the owner, a correspondent or a document pattern that
+  a *future document from the same source* needs to be classified correctly (an employer's
+  bundle structure, a correspondent's spelling, a standing permission). Also read automatically
+  every run.
+- **`LOCAL_LOG.md`** - a record of what happened this run (a bug found and fixed, an incident,
+  how a specific one-off document was handled) that has no bearing on classifying anything else
+  in the future. Not read automatically; a future session only sees it if it goes looking, so
+  don't put something here that the next run actually needs to know unprompted.
+
+Anything that is true for every Paperless instance goes into this file (`AGENTS.md`) instead, in
+the section it belongs to, in generic wording. Before ending a session, check whether anything
+came up that is not already written down, and whether it's a rule, knowledge, or just log.
 
 ## Agent skills
 

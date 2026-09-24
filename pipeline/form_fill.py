@@ -2,9 +2,9 @@
 embedded image per page, an OCR text layer, no AcroForm fields, no vector table lines) as
 `prepare`/`ocr.py` produce them, or a born-digital layout PDF with no fillable fields either.
 
-Built after repeated form-filling sessions (see LOCAL.md for the instance-specific ones) kept
-re-deriving the same things by hand, each via several rounds of fill -> render -> eyeball ->
-adjust: where a label sits (read out `page.get_text('words')` for a y-range and guess), where a
+Built after repeated form-filling sessions (see LOCAL_KNOWLEDGE.md for the instance-specific
+ones) kept re-deriving the same things by hand, each via several rounds of fill -> render ->
+eyeball -> adjust: where a label sits (read out `page.get_text('words')` for a y-range and guess), where a
 scanned table's gridlines are (`page.get_drawings()` returns nothing - the whole page is one
 image, there is no vector line to find), how small a font has to be to fit one line without
 touching the next column (guess a size, render, see it collide, guess smaller), and how to

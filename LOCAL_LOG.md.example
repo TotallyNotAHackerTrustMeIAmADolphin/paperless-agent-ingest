@@ -1,0 +1,9 @@
+# LOCAL_LOG.md
+
+Chronological incident log for this instance, one entry per run, newest at the bottom. Copy this
+file to `LOCAL_LOG.md`. NOT read automatically at the start of a run - only consult it (grep for
+a doc id or keyword) when a past incident, bugfix or a specific document's history becomes
+relevant. If a run turns up a fact that's needed for *future* classification (not just a record
+of what happened), put that in `LOCAL_KNOWLEDGE.md` instead - see section 9 in `AGENTS.md`.
+
+- YYYY-MM-DD: ...

@@ -1,9 +1,20 @@
 # LOCAL.md
 
-Everything specific to *this* checkout and its owner. Gitignored: it may contain server
-addresses, names, employers, document ids and anything else you would not publish. Agents read
-it after `AGENTS.md`; rules here override the defaults there. Copy this file to `LOCAL.md` and
-fill in what you know; sections you leave empty are fine.
+Everything specific to *this* checkout and its owner, split across three gitignored files (may
+contain server addresses, names, employers, document ids and anything else you would not
+publish):
+
+- **`LOCAL.md`** (this file) - short standing rules and instance config. Read every run.
+- **`LOCAL_KNOWLEDGE.md`** - what you know about the owner, their correspondents and recurring
+  document patterns, needed to classify new documents correctly. Also read every run.
+- **`LOCAL_LOG.md`** - a chronological incident log, one entry per run. NOT read automatically;
+  only consult it (grep for a doc id or keyword) when a past incident, bugfix or a specific
+  document's history becomes relevant.
+
+Copy the three `*.example` files to drop the `.example` suffix and fill in what you know;
+sections you leave empty are fine. Agents read `LOCAL.md` and `LOCAL_KNOWLEDGE.md` after
+`AGENTS.md`; rules here override the defaults there. See section 9 in `AGENTS.md` for which of
+the three files a new finding belongs in.
 
 ## Instance
 
@@ -20,23 +31,7 @@ fill in what you know; sections you leave empty are fine.
 - Known inconsistencies that must NOT be cleaned up (two tags meaning the same thing, ...).
 - Preferred document types and what they cover.
 
-## About the owner and their documents
-
-- Who the documents belong to (name as it appears on letters), addresses that recur.
-- Recurring correspondents and how their documents look (employers, insurers, authorities).
-- Known bundle patterns (payroll exports, onboarding packets) and how to split them.
-- Open gaps the owner has confirmed (a document that is expected but not in Paperless yet).
-- Whether the owner has given standing permission to reuse a signature for filling in their own
-  forms with `pipeline/form_fill.py` (default: no - treat any earlier use as one-off unless the
-  owner says otherwise), and where the signature file lives on this machine if so.
-
 ## Machine-specific setup notes
 
 - Where Tesseract/Ghostscript/poppler live, `TESSDATA_PREFIX`, anything that took a while
   to get working.
-
-## Incident log
-
-One line per run with the date and what was learned. Newest at the bottom.
-
-- YYYY-MM-DD: ...

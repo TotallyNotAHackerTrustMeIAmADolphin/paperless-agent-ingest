@@ -55,7 +55,9 @@ python -m venv .venv
 . .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env            # fill in PAPERLESS_URL and PAPERLESS_TOKEN
-cp LOCAL.md.example LOCAL.md    # optional: your instance's conventions, for the agent
+cp LOCAL.md.example LOCAL.md                     # optional: your instance's conventions
+cp LOCAL_KNOWLEDGE.md.example LOCAL_KNOWLEDGE.md # optional: your correspondents/patterns
+cp LOCAL_LOG.md.example LOCAL_LOG.md             # optional: incident log, read on demand only
 python -m pipeline.check_connection
 python -m pipeline.selftest     # exercises every write path with throwaway documents
 ```
@@ -117,8 +119,11 @@ that prompt.
 The agent's rules live in `AGENTS.md`: the workflow, the classification rules (dates, names,
 duplicates, missing pages, bundles), the pipeline reference and the Paperless behaviours the
 pipeline depends on. `CLAUDE.md` just points at it. Everything specific to *your* instance and
-*your* documents goes into `LOCAL.md`, which is gitignored; the agent is told to read it and to
-write what it learns back into it.
+*your* documents is gitignored and split across three files, so the agent isn't re-reading its
+whole history on every run: `LOCAL.md` (standing conventions) and `LOCAL_KNOWLEDGE.md` (your
+correspondents and document patterns) are read every run and are where the agent writes back
+what it learns; `LOCAL_LOG.md` is a chronological incident log the agent only consults on
+demand, not on every run.
 
 ## Filling in blank forms
 
@@ -134,7 +139,7 @@ from its own aspect ratio instead of a hand-picked box. There is no pipeline sta
 a library the agent calls from an interactive session (fill a field, `form_fill.preview` the
 result, adjust, repeat, then `client.update_version` once it looks right). See `AGENTS.md` for
 the full API, and keep a signature's reuse permission and any document-specific notes in
-`LOCAL.md`, never in a committed file.
+`LOCAL_KNOWLEDGE.md`, never in a committed file.
 
 ## Safety properties
 
@@ -143,8 +148,9 @@ the full API, and keep a signature's reuse permission and any document-specific 
   retrievable). Only bundles that were split into several new documents are deleted, after
   every part succeeded, and only into Paperless's trash.
 - Suspected duplicates are tagged, never deleted.
-- `work/` keeps every original and is gitignored, as are `.env` and `LOCAL.md`. Do not commit
-  them; they contain your documents and your token.
+- `work/` keeps every original and is gitignored, as are `.env`, `LOCAL.md`,
+  `LOCAL_KNOWLEDGE.md` and `LOCAL_LOG.md`. Do not commit them; they contain your documents and
+  your token.
 - Each stage takes a lock file so a scheduled run and an interactive session cannot corrupt
   each other's report.
 
@@ -164,7 +170,9 @@ docs/
   ingest-prompt.md    the prompt the runner scripts hand to the agent
   review-2026-09-22.md  (German) Paperless 3.1 capabilities vs. this pipeline, design rationale
 AGENTS.md             agent instructions (generic)
-LOCAL.md.example      template for your instance-specific notes (copy to LOCAL.md)
+LOCAL.md.example                template for your standing conventions (copy to LOCAL.md)
+LOCAL_KNOWLEDGE.md.example      template for correspondents/patterns (copy to LOCAL_KNOWLEDGE.md)
+LOCAL_LOG.md.example            template for the incident log (copy to LOCAL_LOG.md)
 run_ingest.sh / .bat  unattended runner
 work/                 scratch: inbox/, processed/, review/ (gitignored)
 ```

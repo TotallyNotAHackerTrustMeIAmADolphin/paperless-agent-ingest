@@ -1,0 +1,21 @@
+# LOCAL_KNOWLEDGE.md
+
+What you know about the owner, their correspondents and recurring document patterns on this
+instance - needed to classify new documents from the same senders/bundles correctly. Unlike
+`LOCAL_LOG.md` this is not "what happened", it's "what still holds"; read every run, same as
+`LOCAL.md`. Copy this file to `LOCAL_KNOWLEDGE.md` and fill in what you know.
+
+## The owner and their documents
+
+- Who the documents belong to (name as it appears on letters), addresses that recur.
+- Recurring correspondents and how their documents look (employers, insurers, authorities).
+- Known bundle patterns (payroll exports, onboarding packets) and how to split them.
+- Open gaps the owner has confirmed (a document that is expected but not in Paperless yet).
+- Whether the owner has given standing permission to reuse a signature for filling in their own
+  forms with `pipeline/form_fill.py` (default: no - treat any earlier use as one-off unless the
+  owner says otherwise), and where the signature file lives on this machine if so.
+
+## Filling in scanned forms
+
+Anything about a specific form or a technique `pipeline/form_fill.py` doesn't cover yet (see
+`AGENTS.md` for the module itself).
