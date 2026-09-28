@@ -172,6 +172,7 @@ pipeline/
 tests/                offline tests for the pure helper functions
 docs/
   playbook.md         processes, tool map, definition of done; also the runner prompt; read first every run
+  playbook-documents.md  procedures P10-P15 for filling, cropping, signing, re-uploading a document
   agents/             issue tracker, triage labels and domain-doc conventions for agent skills
   review-2026-09-22.md  (German) Paperless 3.1 capabilities vs. this pipeline, design rationale
 AGENTS.md             agent instructions (generic)

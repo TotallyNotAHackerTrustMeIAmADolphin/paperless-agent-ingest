@@ -171,6 +171,8 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
     size instead). `detect_row_lines` alone (without a matching `detect_col_lines`) still finds a
     single line's position directly, e.g. the rule above a signature, when reasoning from a
     nearby label's offset alone isn't reliable enough.
+  - On a rotated scan (`/Rotate 90/270`) `find_label` rects are in raw space: `to_visible` maps
+    them, `place_text_visible` places upright text at a visible-page coordinate.
   - `insert_signature` sizes a signature from its real aspect ratio instead of a hand-picked rect
     (which silently clamps to whichever of width/height is tighter). `preview` renders pages for
     the fill -> render -> look -> adjust loop this module exists to shorten - still do this even
@@ -313,6 +315,8 @@ Paperless before assuming data loss; a concurrent run probably finished the job.
   note at the top of this file.
 - `docs/playbook.md`: the operating manual (processes, tool map, definition of done) and the
   prompt the runner scripts hand to the agent. Read first every run.
+- `docs/playbook-documents.md`: procedures for changing or creating documents (form filling,
+  cropping, signing, uploading a new version) and the coordinate-finding tools behind them.
 - `docs/review-2026-09-22.md` (German): Paperless 3.1 capabilities vs. this pipeline and the
   reasoning behind the current design.
 
