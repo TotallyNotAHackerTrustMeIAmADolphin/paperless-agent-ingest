@@ -21,10 +21,22 @@ the chat.
 | Overview of the report, one block per document | `report` |
 | Is the new text the same as a filed document? | `compare NEW OLD` |
 | Tag and retitle the already-filed side of a duplicate | `mark-duplicate NEW OLD` |
-| Split, reorder, merge, crop pages | `pipeline.pdf_tools` (`split_pdf`, `assemble_pages`, `merge_pdfs`, `crop_page`) |
-| Fill a blank form | `pipeline.form_fill` |
+| Split, reorder, merge pages | `pipeline.pdf_tools`: `split_pdf`, `assemble_pages`, `merge_pdfs` |
+| Look at a page | `pdf_tools.render_page`, `form_fill.preview`, then Read the PNG |
+| Crop part of a page, rebuild a PDF from crops, give it a text layer | `pdf_tools.crop_page`, `build_pdf_from_images`, `ocr.run_ocr` |
+| Find a printed label on a page | `form_fill.find_label` |
+| Find a scanned table's gridlines | `form_fill.detect_row_lines`, `detect_col_lines` |
+| Put a value into a known cell | `form_fill.fill_centered` |
+| Put a value after a label, check a box | `form_fill.text_width`, `fit_font_size`, `place_text`, `mark_checkbox` |
+| Same on a rotated scan (`/Rotate`) | `form_fill.to_visible`, `place_text_visible` |
+| Sign | `form_fill.insert_signature` (permission rule in P6) |
+| Push a changed file back | `client.update_version`, `client.wait_for_task` |
 | Push results back | `apply` |
 | Anything else against Paperless | `pipeline.client`, never raw HTTP |
+
+Why each helper works the way it does is in its docstring; read that before using one. Procedures
+for changing or creating documents (fill, crop, sign, upload) are in `docs/playbook-documents.md`,
+opened only when P6 or an oversized scan calls for it.
 
 Reading each `content.md` is a manual step and cannot be replaced by a command. Classification is
 your judgement, not a tool's.
@@ -68,6 +80,8 @@ out of order). Render the page and look, do not trust OCR of tiny stamps.
 
 1. Split or reorder from `work/processed/<id>/ocr.pdf` into `work/processed/<key>/ocr.pdf`
    (keys like `265a`).
+   A page that holds several logical pages side by side (an oversized or folded scan) is cropped
+   first, see `docs/playbook-documents.md`.
 2. One `classifications.json` entry per output, each with `source_doc_id` of the bundle.
 
 **Finished when:** every part has its own entry and the page count of all parts matches the source
@@ -88,11 +102,12 @@ One entry, `source_doc_id` a list. `apply` versions the first and deletes the ot
 
 ## P6 Form to fill in
 
-Only for documents the owner submits, see the signature permission in `LOCAL_KNOWLEDGE.md`. Loop:
-`form_fill` places, render, look, adjust. Upload with `client.update_version`, wait with
-`client.wait_for_task`.
+Trigger: a blank form or questionnaire in the inbox that the owner has to submit. Fill only forms
+the owner submits themselves; the signature permission and its limits are in `LOCAL_KNOWLEDGE.md`.
+Leave missing facts empty and report them. The procedure (fill, crop, sign, upload) is in
+`docs/playbook-documents.md`; open it now.
 
-**Finished when:** the rendered result was inspected and the version is in Paperless.
+**Finished when:** `docs/playbook-documents.md` says so for the procedure used.
 
 ## P7 Something failed
 
