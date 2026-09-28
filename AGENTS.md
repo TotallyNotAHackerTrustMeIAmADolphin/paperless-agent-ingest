@@ -41,7 +41,8 @@ apply interactively.
 
 1. `python -m pipeline.cli fetch` - downloads every untouched document into `work/inbox/<id>/`.
 2. `python -m pipeline.cli prepare` - blank-page/rotation fix, OCR, per-page text, report.
-3. Read `work/review/classification_report.json` and every `work/processed/<id>/content.md`.
+3. `python -m pipeline.cli report` for the overview of `work/review/classification_report.json`,
+   then read every `work/processed/<id>/content.md`.
    Classify by reading (section 3). For every document also check: bundled? misordered?
    pages missing? duplicate of something already filed?
 4. Split/merge/reorder with `pipeline.pdf_tools` (`split_pdf`, `assemble_pages`, `merge_pdfs`)
@@ -102,8 +103,8 @@ the replace-yourself rule in `apply`, which only ever touches a document's own s
 An empty `exact_duplicate_of` proves nothing for born-digital files: a portal that renders the
 PDF on every download produces different bytes for the same letter, so compare the candidate's
 Paperless `content` (whitespace-normalized) with the new text. `apply` cannot touch the
-already-filed side of a pair; tag and retitle it with `client.update_document` (fetch its tag
-list first, `tags` replaces the list). If the document an old suffix points at no longer
+already-filed side of a pair; tag and retitle it with `python -m pipeline.cli mark-duplicate NEW
+OLD`, and use `compare NEW OLD` to decide. If the document an old suffix points at no longer
 exists (GET 404, the user decided that pair), point the suffix at the new duplicate instead.
 
 **Bundles and order.** No automatic detector exists. Signals: letterhead, sender or date
@@ -184,7 +185,8 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
   re-OCRing a Tagged PDF only destroys its structure), `extract_text` (pymupdf per page,
   reading-order sorted, whitespace collapsed, a `--- Page N of M ---` line before every page;
   page N of `content.md` is index N-1 of `ocr.pdf`).
-- `cli.py` - three stages behind a per-stage lock file (`work/.stage.lock`, stale after 3 h):
+- `cli.py` - three stages behind a per-stage lock file (`work/.stage.lock`, stale after 3 h;
+  the helper commands from `tools.py` are dispatched here without the lock):
   - `fetch`: `GET /api/documents/?is_in_inbox=true` plus a fallback query for documents with
     neither correspondent nor document_type (legacy uploads from before the inbox tag). Writes
     `work/inbox/<id>/original.pdf` and `meta.json` (metadata snapshot without `content`).
@@ -309,6 +311,8 @@ Paperless before assuming data loss; a concurrent run probably finished the job.
   every run.
 - `LOCAL_LOG.md` (gitignored): chronological incident log. Consulted on demand only, see the
   note at the top of this file.
+- `docs/playbook.md`: the operating manual (processes, tool map, definition of done). Read first
+  every run.
 - `docs/ingest-prompt.md`: the prompt the runner scripts hand to the agent.
 - `docs/review-2026-09-22.md` (German): Paperless 3.1 capabilities vs. this pipeline and the
   reasoning behind the current design.

@@ -1,4 +1,4 @@
-﻿"""Read-mostly helper commands used during classification. Run as
+"""Read-mostly helper commands used during classification. Run as
 `python -m pipeline.cli <command>`; none of them take the stage lock because none writes to work/.
 
   report                    one line per document from work/review/classification_report.json

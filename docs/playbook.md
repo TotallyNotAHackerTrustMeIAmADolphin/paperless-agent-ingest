@@ -98,7 +98,7 @@ Only for documents the owner submits, see the signature permission in `LOCAL_KNO
 ## P8 Change to the pipeline code
 
 Run `python -m pipeline.selftest` after touching `client.py` or `apply`, after a Paperless upgrade
-and on a fresh machine. Offline helpers have tests in `tests/`. Keep `AGENT_HANDOFF.md` in step with
+and on a fresh machine. Offline helpers have tests in `tests/` (`pip install pytest`, then `python -m pytest tests`). Keep `AGENT_HANDOFF.md` in step with
 `client.py` by hand.
 
 ## P9 Closing out a run

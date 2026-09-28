@@ -15,6 +15,7 @@ work/**
 # ad-hoc debug-render scratch dirs outside work/ (e.g. page_check/) - same category as work/,
 # just not nested under it
 page_check/
+scratch_*.pdf
 
 
 # handoff doc for external agents - contains a live API token, never commit

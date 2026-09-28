@@ -106,10 +106,11 @@ Manually, stage by stage:
 ```sh
 python -m pipeline.cli fetch      # inbox documents -> work/inbox/<id>/
 python -m pipeline.cli prepare    # fix, OCR, extract text, write the report
+python -m pipeline.cli report     # one block per document from that report
 # ... the agent reads work/review/classification_report.json and work/processed/*/content.md,
 #     splits/merges with pipeline.pdf_tools, writes work/review/classifications.json ...
 python -m pipeline.cli apply      # push back to Paperless
-python -m pipeline.cli report     # overview of the prepare report (see docs/playbook.md)
+# helpers: compare NEW OLD (same text as a filed document?), mark-duplicate NEW OLD
 ```
 
 With an agent, unattended: `run_ingest.sh` (any agent with a CLI; set `AGENT`, default
@@ -117,7 +118,8 @@ With an agent, unattended: `run_ingest.sh` (any agent with a CLI; set `AGENT`, d
 agent `docs/ingest-prompt.md`. For an agent without a CLI, open the repository in it and paste
 that prompt.
 
-The agent's rules live in `AGENTS.md`: the workflow, the classification rules (dates, names,
+The order of work, the tool for each step and what "finished" means are in `docs/playbook.md`,
+which the agent reads first. The agent's rules live in `AGENTS.md`: the workflow, the classification rules (dates, names,
 duplicates, missing pages, bundles), the pipeline reference and the Paperless behaviours the
 pipeline depends on. `CLAUDE.md` just points at it. Everything specific to *your* instance and
 *your* documents is gitignored and split across three files, so the agent isn't re-reading its
@@ -159,14 +161,17 @@ the full API, and keep a signature's reuse permission and any document-specific 
 
 ```
 pipeline/
-  cli.py              fetch / prepare / apply stages, stage lock
+  cli.py              fetch / prepare / apply stages, stage lock, command dispatch
+  tools.py            report / compare / mark-duplicate helper commands (no lock)
   client.py           the only HTTP code: Paperless REST API v10 wrapper
   pdf_tools.py        blank-page detection, rotation check, split/merge/assemble, rendering
   form_fill.py        overlay text/checkmarks/a signature onto a blank scanned or flat form
   ocr.py              ocrmypdf wrapper and per-page text extraction
   selftest.py         live round-trip test of every write path (throwaway documents)
   check_connection.py smoke test for .env
+tests/                offline tests for the pure helper functions
 docs/
+  playbook.md         processes, tool map, definition of done; read first every run
   agents/             issue tracker, triage labels and domain-doc conventions for agent skills
   ingest-prompt.md    the prompt the runner scripts hand to the agent
   review-2026-09-22.md  (German) Paperless 3.1 capabilities vs. this pipeline, design rationale
