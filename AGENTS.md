@@ -36,7 +36,7 @@ deleted documents in its trash), not a manual gate. `LOCAL.md` may switch this t
 `docs/playbook.md` is the operating manual and is read at the start of every run: processes,
 which tool when, what finished means. This section is the short version.
 
-`run_ingest.bat` / `run_ingest.sh` start an agent with `docs/ingest-prompt.md`; the same steps
+`run_ingest.bat` / `run_ingest.sh` start an agent with `docs/playbook.md`; the same steps
 apply interactively.
 
 1. `python -m pipeline.cli fetch` - downloads every untouched document into `work/inbox/<id>/`.
@@ -311,9 +311,8 @@ Paperless before assuming data loss; a concurrent run probably finished the job.
   every run.
 - `LOCAL_LOG.md` (gitignored): chronological incident log. Consulted on demand only, see the
   note at the top of this file.
-- `docs/playbook.md`: the operating manual (processes, tool map, definition of done). Read first
-  every run.
-- `docs/ingest-prompt.md`: the prompt the runner scripts hand to the agent.
+- `docs/playbook.md`: the operating manual (processes, tool map, definition of done) and the
+  prompt the runner scripts hand to the agent. Read first every run.
 - `docs/review-2026-09-22.md` (German): Paperless 3.1 capabilities vs. this pipeline and the
   reasoning behind the current design.
 

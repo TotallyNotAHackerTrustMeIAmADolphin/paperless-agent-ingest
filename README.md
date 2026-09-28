@@ -115,7 +115,7 @@ python -m pipeline.cli apply      # push back to Paperless
 
 With an agent, unattended: `run_ingest.sh` (any agent with a CLI; set `AGENT`, default
 `claude`) or `run_ingest.bat` (Claude Code on Windows). Both activate the venv and hand the
-agent `docs/ingest-prompt.md`. For an agent without a CLI, open the repository in it and paste
+agent `docs/playbook.md`. For an agent without a CLI, open the repository in it and paste
 that prompt.
 
 The order of work, the tool for each step and what "finished" means are in `docs/playbook.md`,
@@ -171,9 +171,8 @@ pipeline/
   check_connection.py smoke test for .env
 tests/                offline tests for the pure helper functions
 docs/
-  playbook.md         processes, tool map, definition of done; read first every run
+  playbook.md         processes, tool map, definition of done; also the runner prompt; read first every run
   agents/             issue tracker, triage labels and domain-doc conventions for agent skills
-  ingest-prompt.md    the prompt the runner scripts hand to the agent
   review-2026-09-22.md  (German) Paperless 3.1 capabilities vs. this pipeline, design rationale
 AGENTS.md             agent instructions (generic)
 LOCAL.md.example                template for your standing conventions (copy to LOCAL.md)

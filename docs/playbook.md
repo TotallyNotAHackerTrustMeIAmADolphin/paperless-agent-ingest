@@ -5,6 +5,13 @@ work is controlled. `AGENTS.md` holds the rules and reference; this file is the 
 Commands run from the repo root with `.venv` active: `python -m pipeline.cli <command>`.
 Instance-specific names and conventions live in `LOCAL.md` / `LOCAL_KNOWLEDGE.md`.
 
+This file is also the prompt the runner scripts (`run_ingest.bat` / `run_ingest.sh`) hand to the
+agent: an unattended run reads it first, then `LOCAL.md` and `LOCAL_KNOWLEDGE.md` (not
+`LOCAL_LOG.md`, see the note at the top of `AGENTS.md`), and carries out P1 completely. Work in the
+operating mode `LOCAL.md` specifies (default: fully automatic, ask only when something is
+genuinely unclear). Do not rely on any agent memory system; the next session has no access to
+the chat.
+
 ## Tool map
 
 | Need | Use |
@@ -24,11 +31,13 @@ your judgement, not a tool's.
 
 ## P1 Normal ingest run
 
-1. `fetch`, then `prepare`. `prepare` skips folders that are no longer untouched, that is normal.
+1. Read `LOCAL.md` and `LOCAL_KNOWLEDGE.md`. `fetch`, then `prepare`. `prepare` skips folders that are no longer untouched, that is normal.
 2. `report` for the overview, then read every `work/processed/<id>/content.md` in full.
 3. Per document decide: title, correspondent, type, tags, date (`AGENTS.md` section 3). Check
    every document for bundle, order, missing pages, duplicate (P2 to P4).
-4. Write `work/review/classifications.json`, one entry per output document.
+4. Write `work/review/classifications.json` (UTF-8 **without BOM**; Windows PowerShell 5.1
+   `Set-Content -Encoding utf8` adds one and `apply` fails, write it from Python), one entry per
+   output document.
 5. `apply`.
 6. `fetch` again. Repeat from 1 while it reports more than 0 untouched documents.
 7. Close out with P9.
