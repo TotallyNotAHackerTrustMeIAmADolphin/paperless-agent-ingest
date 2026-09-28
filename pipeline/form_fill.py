@@ -118,6 +118,38 @@ def place_text(
     return size
 
 
+def to_visible(page: pymupdf.Page, rect: pymupdf.Rect) -> pymupdf.Rect:
+    """Maps a rect from the page's raw (unrotated) space into the visible, rotated page space.
+    `find_label` (via `page.get_text('words')`) and `insert_text` both work in raw space, but
+    `page.rect`, a render, and `detect_row_lines`/`detect_col_lines` are in visible space. On a
+    scan with `/Rotate 90/180/270` the two differ, so a label found by word search has to be
+    mapped before it is compared with anything measured on a render."""
+    return rect * page.rotation_matrix
+
+
+def place_text_visible(
+    page: pymupdf.Page,
+    x: float,
+    y: float,
+    text: str,
+    size: float = 8.0,
+    fontname: str = DEFAULT_FONT,
+    color: tuple[float, float, float] = (0, 0, 0),
+) -> None:
+    """Like `place_text` but (x, y) is the text's baseline start in VISIBLE page coordinates, the
+    way a render or `page.rect` shows the page, and the text comes out upright there whatever the
+    page's `/Rotate`. Scanners often deliver `/Rotate 90/270`, where `insert_text` alone works in
+    the raw, unrotated space and, given a visible coordinate, puts the text in the wrong place and
+    sideways. Done by hand this took several rounds every time: map the point through
+    `page.derotation_matrix` and pass `rotate=page.rotation`, with no manual y flip (tried, wrong).
+    `insert_text`'s y is the baseline while an OCR/label rect gives the top edge: for a value on
+    the same line as a label pass about `label.y1 - 3`, not `label.y0`. A rect from `find_label`
+    is raw space: use `to_visible` before combining it with visible coordinates.
+    No fitting or wrapping here; size the text with `fit_font_size` first."""
+    raw = pymupdf.Point(x, y) * page.derotation_matrix
+    page.insert_text(raw, text, fontsize=size, fontname=fontname, color=color, rotate=page.rotation)
+
+
 def mark_checkbox(page: pymupdf.Page, x: float, y: float, size: float = 9.0, mark: str = "X") -> None:
     """Marks a checkbox at (x, y) (baseline). A thin wrapper over place_text purely for call
     sites to read as 'this is a checkbox' - see `find_label`'s docstring for how to locate the
