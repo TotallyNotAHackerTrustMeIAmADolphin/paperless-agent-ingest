@@ -32,6 +32,9 @@ deleted documents in its trash), not a manual gate. `LOCAL.md` may switch this t
 
 ## 2. How an ingest run goes
 
+`docs/playbook.md` is the operating manual: processes, which tool when, what finished means.
+This section is the short version.
+
 `run_ingest.bat` / `run_ingest.sh` start an agent with `docs/ingest-prompt.md`; the same steps
 apply interactively.
 
@@ -95,6 +98,12 @@ pointing at the other document; the user deletes in the UI. Byte-identical files
 (`exact_duplicate_of` in the report, or a rejected upload's `duplicate_of`) are near-certain
 grounds; keyword hits (`possible_duplicates`) are a reason to read both. This is stricter than
 the replace-yourself rule in `apply`, which only ever touches a document's own source ids.
+An empty `exact_duplicate_of` proves nothing for born-digital files: a portal that renders the
+PDF on every download produces different bytes for the same letter, so compare the candidate's
+Paperless `content` (whitespace-normalized) with the new text. `apply` cannot touch the
+already-filed side of a pair; tag and retitle it with `client.update_document` (fetch its tag
+list first, `tags` replaces the list). If the document an old suffix points at no longer
+exists (GET 404, the user decided that pair), point the suffix at the new duplicate instead.
 
 **Bundles and order.** No automatic detector exists. Signals: letterhead, sender or date
 changing between pages; "page N of M" footers resetting to 1; page stamps out of order. Those
@@ -196,6 +205,9 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
     the bundle only after every part succeeded (`ocr.uploaded.pdf`). Markers make a rerun skip
     finished entries; versioned/patched sources are never deleted on any run. Per-entry
     failures are isolated so the deletion pass still runs for entries that did succeed.
+- `tools.py` - read-mostly helper commands behind `cli.py`: `report` (report overview), `compare
+  NEW OLD` (text similarity against a filed document, the check for born-digital duplicates),
+  `mark-duplicate NEW OLD` (tags and retitles the filed side). No stage lock.
 - `selftest.py` - `python -m pipeline.selftest`: every write path against the live instance with
   throwaway documents and a throwaway tag/type (upload, tag forcing, PATCH, checksum lookup,
   duplicate rejection, `update_version`, download, `apply()` version and split paths, delete).

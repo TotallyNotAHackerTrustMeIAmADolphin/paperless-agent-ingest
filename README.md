@@ -109,6 +109,7 @@ python -m pipeline.cli prepare    # fix, OCR, extract text, write the report
 # ... the agent reads work/review/classification_report.json and work/processed/*/content.md,
 #     splits/merges with pipeline.pdf_tools, writes work/review/classifications.json ...
 python -m pipeline.cli apply      # push back to Paperless
+python -m pipeline.cli report     # overview of the prepare report (see docs/playbook.md)
 ```
 
 With an agent, unattended: `run_ingest.sh` (any agent with a CLI; set `AGENT`, default

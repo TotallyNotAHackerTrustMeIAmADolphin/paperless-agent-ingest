@@ -1,11 +1,12 @@
 # Ingest run
 
+The order of work, tools and definition of done are in `docs/playbook.md`; read it first.
 Carry out the full ingest process for the Paperless scans in this project, as described in
 `AGENTS.md` (and `LOCAL.md`/`LOCAL_KNOWLEDGE.md` if present; read all three first - but not
 `LOCAL_LOG.md`, which is consulted only on demand, see the note at the top of `AGENTS.md`):
 
 1. Run `python -m pipeline.cli fetch`, then `python -m pipeline.cli prepare`.
-2. Read `work/review/classification_report.json` and every `work/processed/<id>/content.md`.
+2. Run `python -m pipeline.cli report` for the overview, then read every `work/processed/<id>/content.md`.
    Decide title, correspondent, document type, tags and date for every document yourself by
    reading the extracted text (no separate LLM API call) and write
    `work/review/classifications.json`.
@@ -14,7 +15,8 @@ Carry out the full ingest process for the Paperless scans in this project, as de
    reorder before uploading.
 4. Check every document for missing pages (numbering, "page N of M", sentences starting
    mid-way) and report gaps instead of ignoring them.
-5. Do NOT delete suspected duplicates; tag them with the duplicate tag from `LOCAL.md`
+5. Confirm suspected duplicates with `compare NEW OLD`, mark the filed side with
+   `mark-duplicate NEW OLD`. Do NOT delete them; tag them with the duplicate tag from `LOCAL.md`
    (default `Duplikat-Verdacht`) and add the title suffix pointing at the other document. Check
    `LOCAL_KNOWLEDGE.md` for correspondents/bundles you already know about.
 6. Run `python -m pipeline.cli apply`.

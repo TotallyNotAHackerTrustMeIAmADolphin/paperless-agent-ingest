@@ -467,11 +467,21 @@ def _acquire_lock(stage: str) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2 or sys.argv[1] not in STAGES:
-        print(f"usage: python -m pipeline.cli <{'|'.join(STAGES)}>")
+    from pipeline import tools
+
+    cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+    if cmd in tools.COMMANDS:
+        func, nargs = tools.COMMANDS[cmd]
+        if len(sys.argv) != 2 + nargs:
+            print(f"usage: python -m pipeline.cli {cmd}" + " <id>" * nargs)
+            sys.exit(1)
+        func(*(int(a) for a in sys.argv[2:]))
+        sys.exit(0)
+    if len(sys.argv) != 2 or cmd not in STAGES:
+        print(f"usage: python -m pipeline.cli <{'|'.join(STAGES)}|{'|'.join(tools.COMMANDS)}>")
         sys.exit(1)
-    _acquire_lock(sys.argv[1])
+    _acquire_lock(cmd)
     try:
-        STAGES[sys.argv[1]]()
+        STAGES[cmd]()
     finally:
         LOCK_FILE.unlink(missing_ok=True)
