@@ -306,3 +306,14 @@ def train_classifier() -> str:
     resp = session.post(_url("tasks/run/"), json={"task_type": "train_classifier"})
     resp.raise_for_status()
     return resp.json()["task_id"]
+
+
+def reprocess_documents(doc_ids: list[int]) -> str:
+    """Re-run Paperless's consumption pipeline on the documents' current files without
+    re-uploading (`POST documents/reprocess/`). Needed because `update_version` never recomputes
+    `page_count`: a document replaced by a 1-page file keeps reporting the old count. The call
+    only queues the work; poll the document (`page_count`) to see it finish. Returns the
+    server's `result` text."""
+    resp = session.post(_url("documents/reprocess/"), json={"documents": list(doc_ids)})
+    resp.raise_for_status()
+    return resp.json()["result"]

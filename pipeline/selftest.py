@@ -13,6 +13,7 @@ the pinned Accept header, delete. Creates its own throwaway tag and document typ
 taxonomy is touched.
 """
 import sys
+import time
 import tempfile
 from pathlib import Path
 
@@ -176,6 +177,39 @@ def main() -> int:
         version_ids = [v["id"] for v in after["versions"] if v["id"] != doc_id]
         gone = all(client.session.get(client._url(f"documents/{v}/")).status_code == 404 for v in version_ids)
         check("version id is not a standalone document", gone)
+
+        print("reprocess after update_version (stale page_count)")
+        two = folder / "two.pdf"
+        d2 = pymupdf.open()
+        d2.new_page().insert_text((72, 72), f"{TITLE_PREFIX} two pages", fontsize=14)
+        d2.new_page()  # blank second page
+        d2.save(two)
+        d2.close()
+        one = _pdf(folder, "one.pdf", f"{TITLE_PREFIX} one page")
+        task = _wait(client.upload_document(two, title=f"{TITLE_PREFIX} pagecount", tags=[tag], document_type=doc_type))
+        pc_id = task.get("related_document")
+        check("2-page throwaway uploaded", pc_id is not None)
+        if pc_id is not None:
+            created_ids.append(pc_id)
+            client.update_document(pc_id, tags=[tag], title=f"{TITLE_PREFIX} pagecount")
+            _wait(client.update_version(pc_id, one, label="selftest 1 page"))
+            client.update_document(pc_id, tags=[tag], title=f"{TITLE_PREFIX} pagecount")
+            stale = client.get_document(pc_id).get("page_count")
+            print(f"  info page_count after update_version: {stale} (2 = the bug is still present)")
+            before_meta = {k: client.get_document(pc_id)[k] for k in ("tags", "correspondent", "document_type", "title")}
+            client.reprocess_documents([pc_id])
+            fixed = None
+            for _ in range(40):
+                fixed = client.get_document(pc_id).get("page_count")
+                if fixed == 1:
+                    break
+                time.sleep(1.5)
+            # Established on 3.2.1 (ticket #1): the reprocess task succeeds and re-extracts content
+            # from the newest version, but page_count stays at the root file's value. So this is
+            # evidence, not a pass/fail gate; it flips to "ok" if a Paperless upgrade fixes it.
+            print(f"  {'ok  ' if fixed == 1 else 'info'} reprocess_documents and page_count: {fixed} (1 = fixed; 2 = still stale, known limitation)")
+            after_meta = {k: client.get_document(pc_id)[k] for k in ("tags", "correspondent", "document_type", "title")}
+            check("reprocess leaves tags/correspondent/type/title unchanged", after_meta == before_meta, f"{before_meta} -> {after_meta}")
 
         print("download")
         dl = client.download_document(doc_id, folder / "dl.pdf")
