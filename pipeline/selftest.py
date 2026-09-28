@@ -52,6 +52,25 @@ def _wait(task_id: str) -> dict:
     raise RuntimeError(f"task {task_id} did not finish")
 
 
+def _reprocess_task_ids() -> dict[int, str]:
+    resp = client.session.get(client._url("tasks/"), params={"task_type": "reprocess_document", "page_size": 50})
+    resp.raise_for_status()
+    data = resp.json()
+    return {task["id"]: str(task.get("status")).upper() for task in (data.get("results", data) if isinstance(data, dict) else data)}
+
+
+def _wait_new_reprocess_task(known: set[int], timeout_s: int = 60) -> bool:
+    """True once a `reprocess_document` task that was not in `known` has finished successfully.
+    The task carries no `related_document_ids`, so it cannot be matched to a document; the
+    selftest instance is otherwise quiet, and `known` is taken right before the call."""
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        if any(status == "SUCCESS" for tid, status in _reprocess_task_ids().items() if tid not in known):
+            return True
+        time.sleep(1.5)
+    return False
+
+
 def _apply_roundtrip(check, tag: int, doc_type: int) -> list[int]:
     """Drive cli.apply() against real throwaway documents with its work dirs redirected to a
     temp folder. Returns every Paperless id created (for cleanup), including ones apply()
@@ -197,13 +216,11 @@ def main() -> int:
             stale = client.get_document(pc_id).get("page_count")
             print(f"  info page_count after update_version: {stale} (2 = the bug is still present)")
             before_meta = {k: client.get_document(pc_id)[k] for k in ("tags", "correspondent", "document_type", "title")}
+            known = set(_reprocess_task_ids())
             client.reprocess_documents([pc_id])
-            fixed = None
-            for _ in range(40):
-                fixed = client.get_document(pc_id).get("page_count")
-                if fixed == 1:
-                    break
-                time.sleep(1.5)
+            done = _wait_new_reprocess_task(known)
+            check("reprocess task finished", done, "" if done else "no successful reprocess_document task within 60 s")
+            fixed = client.get_document(pc_id).get("page_count")
             # Established on 3.2.1 (ticket #1): the reprocess task succeeds and re-extracts content
             # from the newest version, but page_count stays at the root file's value. So this is
             # evidence, not a pass/fail gate; it flips to "ok" if a Paperless upgrade fixes it.
