@@ -40,7 +40,9 @@ every finding (gap, duplicate, open question) is reported to the user.
 
 Trigger: `exact_duplicate_of` is set, or `possible_duplicates` lists a classified document.
 
-1. `compare NEW OLD` for each candidate. SAME is strong evidence, SIMILAR means read both, DIFFERENT
+1. An empty `exact_duplicate_of` proves nothing for born-digital files: a portal renders a new
+   PDF on every download, so the same letter has different bytes each time. Compare content, not
+   bytes: `compare NEW OLD` for each classified candidate in `possible_duplicates`. SAME is strong evidence, SIMILAR means read both, DIFFERENT
    means not a duplicate. Recurring letters (yearly meter request, yearly invoice) differ in dates
    and stay separate documents.
 2. If duplicate: `mark-duplicate NEW OLD` for the filed side. For the new side, put tag
