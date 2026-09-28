@@ -1,8 +1,9 @@
 # Ingest run
 
-The order of work, tools and definition of done are in `docs/playbook.md`; read it first.
+First read `docs/playbook.md`: it is the order of work, the tool map and the definition of done
+for this run. Follow its processes.
 Carry out the full ingest process for the Paperless scans in this project, as described in
-`AGENTS.md` (and `LOCAL.md`/`LOCAL_KNOWLEDGE.md` if present; read all three first - but not
+`AGENTS.md` (and `LOCAL.md`/`LOCAL_KNOWLEDGE.md` if present; read them after the playbook - but not
 `LOCAL_LOG.md`, which is consulted only on demand, see the note at the top of `AGENTS.md`):
 
 1. Run `python -m pipeline.cli fetch`, then `python -m pipeline.cli prepare`.

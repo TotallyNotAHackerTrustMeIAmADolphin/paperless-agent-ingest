@@ -3,7 +3,8 @@
 Instructions for any coding agent (Claude Code, Codex, Cursor, Copilot, Gemini CLI, Aider, ...)
 working in this repository. Rules come first, the reference material behind them follows.
 
-**Also read `LOCAL.md` and `LOCAL_KNOWLEDGE.md` if they exist.** Both are gitignored and hold
+**Start of every ingest run: read `docs/playbook.md` (order of work, tools, definition of done),
+then `LOCAL.md` and `LOCAL_KNOWLEDGE.md` if they exist.** Those two are gitignored and hold
 everything specific to the owner of this checkout: `LOCAL.md` is their Paperless instance and
 naming conventions, `LOCAL_KNOWLEDGE.md` is what their documents and correspondents look like.
 Rules there override defaults given here. If they do not exist yet, create all three
@@ -32,8 +33,8 @@ deleted documents in its trash), not a manual gate. `LOCAL.md` may switch this t
 
 ## 2. How an ingest run goes
 
-`docs/playbook.md` is the operating manual: processes, which tool when, what finished means.
-This section is the short version.
+`docs/playbook.md` is the operating manual and is read at the start of every run: processes,
+which tool when, what finished means. This section is the short version.
 
 `run_ingest.bat` / `run_ingest.sh` start an agent with `docs/ingest-prompt.md`; the same steps
 apply interactively.
