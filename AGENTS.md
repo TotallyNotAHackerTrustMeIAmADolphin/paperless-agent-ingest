@@ -39,8 +39,10 @@ which tool when, what finished means. This section is the short version.
 `run_ingest.bat` / `run_ingest.sh` start an agent with `docs/playbook.md`; the same steps
 apply interactively.
 
-0. Files that are not in Paperless yet (mail attachments, a folder of scans) go in with
-   `python -m pipeline.cli stage FILE...` instead of being uploaded raw first: they land in
+0. Files that are not in Paperless yet (mail attachments, a folder of scans) go in through the
+   `consume/` folder (`python -m pipeline.cli stage` without arguments, like Paperless's own
+   consume directory) or `python -m pipeline.cli stage FILE...` instead of being uploaded raw
+   first: they land in
    `work/inbox/local-YYYYMMDD-<name>/`, run through the same `prepare`, and `apply` uploads the
    finished file once, classified (one version, original file name kept). Bytes Paperless
    already has are skipped with the existing document id.
@@ -194,7 +196,11 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
   page N of `content.md` is index N-1 of `ocr.pdf`).
 - `cli.py` - four stages behind a per-stage lock file (`work/.stage.lock`, stale after 3 h;
   the helper commands from `tools.py` are dispatched here without the lock):
-  - `stage FILE...`: local intake for files Paperless doesn't have yet. Checksum lookup first
+  - `stage [FILE...]`: local intake for files Paperless doesn't have yet. Without arguments it
+    reads `consume/` (top level, skips dotfiles and files younger than 5 s) and moves each
+    file out: staged ones to `work/inbox/<key>/source<ext>`, ones Paperless already has to
+    `work/consume-skipped/`; unsupported types (only PDF and common image formats are taken)
+    stay and are reported. Named files are copied, never moved. Checksum lookup first
     (already there -> skip with the id), else `work/inbox/local-YYYYMMDD-<slug>/original.pdf`
     (images converted to PDF) plus `meta.json` with `title`, `original_file_name`, `source`.
     The key is never all digits, so `prepare` treats it as local (no live untouched check; it

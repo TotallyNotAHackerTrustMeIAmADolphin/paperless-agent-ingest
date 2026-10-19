@@ -16,7 +16,7 @@ the chat.
 
 | Need | Use |
 |---|---|
-| Take in files that are not in Paperless yet (no raw upload first) | `stage FILE...` (P0) |
+| Take in files that are not in Paperless yet (no raw upload first) | drop them into `consume/`, then `stage` (P0); or `stage FILE...` |
 | Pull untouched documents | `fetch` |
 | Fix, OCR, extract text, build the report | `prepare` |
 | Overview of the report, one block per document | `report` |
@@ -44,11 +44,14 @@ your judgement, not a tool's.
 
 ## P0 Local intake (files that are not in Paperless yet)
 
-Trigger: you are handed files directly (mail attachments, a scan folder) instead of finding
-them in the Paperless inbox.
+Trigger: files are waiting in `consume/`, or you are handed files directly (mail
+attachments, a scan folder) instead of finding them in the Paperless inbox.
 
-1. `stage FILE...` - one `local-YYYYMMDD-<name>` folder per new file; files Paperless already
-   has are reported with their document id and skipped.
+1. `stage` (reads and empties `consume/`) or `stage FILE...` (copies the named files) - one
+   `local-YYYYMMDD-<name>` folder per new file; files Paperless already has are reported with
+   their document id and skipped (from `consume/` they move to `work/consume-skipped/`).
+   Unsupported types (Word, ZIP, ...) stay in `consume/`: convert them to PDF or unpack them
+   first.
 2. Continue with P1 from `prepare` (a `fetch` before or after is fine and picks up whatever
    arrived in Paperless the normal way). Classify local entries like any other; their
    `doc_id` is the folder key and they need no `source_doc_id`.
@@ -59,7 +62,7 @@ reported to the user.
 
 ## P1 Normal ingest run
 
-1. Read `LOCAL.md` and `LOCAL_KNOWLEDGE.md`. `fetch`, then `prepare`. `prepare` skips folders that are no longer untouched, that is normal.
+1. Read `LOCAL.md` and `LOCAL_KNOWLEDGE.md`. `stage` (picks up `consume/`, see P0), `fetch`, then `prepare`. `prepare` skips folders that are no longer untouched, that is normal.
 2. `report` for the overview, then read every `work/processed/<id>/content.md` in full.
 3. Per document decide: title, correspondent, type, tags, date (`AGENTS.md` section 3). Check
    every document for bundle, order, missing pages, duplicate (P2 to P4).

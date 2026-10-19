@@ -1,9 +1,10 @@
 """Orchestrates the pipeline stages. Run as `python -m pipeline.cli <stage>`.
 
 Stages:
-  stage FILE...
-           - local intake: copy files that are NOT in Paperless yet (mail attachments, scans
-             from a folder) into work/inbox/<key>/original.pdf with a non-numeric key
+  stage [FILE...]
+           - local intake: take files that are NOT in Paperless yet - from consume/ when no
+             FILE is given (moved out of it, like Paperless's consume folder), else the named
+             files (copied) - into work/inbox/<key>/original.pdf with a non-numeric key
              (`local-YYYYMMDD-<name>`), so prepare/apply process them like fetched documents and
              apply uploads the finished, classified file once - no upload-download round trip,
              no raw first version in Paperless. Files whose bytes Paperless already has are
@@ -119,42 +120,94 @@ def local_key(path: Path, day: str) -> str:
     return f"{LOCAL_PREFIX}{day}-{slug}"
 
 
+CONSUME = Path("consume")
+CONSUME_SKIPPED = Path("work/consume-skipped")
+STAGE_SUFFIXES = {".pdf", ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp", ".gif", ".webp"}
+# A file younger than this may still be being written (scanner, copy, sync client) - leave it for
+# the next run, the same caution Paperless's own consumer applies to its consume folder.
+CONSUME_MIN_AGE_S = 5
+
+
+def _stage_one(src: Path, day: str):
+    """Stage one file. Returns (status, detail): ("staged", folder), ("exists", document id),
+    ("uploaded", folder key) or ("unsupported", None)."""
+    if src.suffix.lower() not in STAGE_SUFFIXES:
+        return "unsupported", None
+    existing = client.find_by_checksum(client.sha256_of(src))
+    if existing:
+        return "exists", existing[0]["id"]
+    key = local_key(src, day)
+    folder = INBOX / key
+    n = 2
+    while folder.exists() and (folder / "meta.json").exists() and json.loads(
+        (folder / "meta.json").read_text(encoding="utf-8")
+    ).get("source") != str(src.resolve()):
+        folder = INBOX / f"{key}-{n}"  # same name staged from a different place the same day
+        n += 1
+    if (PROCESSED / folder.name / "ocr.uploaded.pdf").exists():
+        # The uploaded file is the OCR'd one, so the checksum lookup above can't catch this.
+        return "uploaded", folder.name
+    folder.mkdir(parents=True, exist_ok=True)
+    dest = folder / "original.pdf"
+    if src.suffix.lower() == ".pdf":
+        shutil.copy(src, dest)
+    else:
+        # Same reason as in fetch(): everything downstream only handles PDFs.
+        Image.open(src).convert("RGB").save(dest, "PDF")
+    meta = {"title": src.stem, "original_file_name": src.with_suffix(".pdf").name, "source": str(src.resolve())}
+    (folder / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    return "staged", folder
+
+
+def _consume_files() -> list[Path]:
+    """Files waiting in consume/ (top level only), oldest first; skips dotfiles such as
+    .gitkeep and files still being written."""
+    if not CONSUME.is_dir():
+        return []
+    now = time.time()
+    files = [
+        p for p in CONSUME.iterdir()
+        if p.is_file() and not p.name.startswith(".") and now - p.stat().st_mtime >= CONSUME_MIN_AGE_S
+    ]
+    return sorted(files, key=lambda p: p.stat().st_mtime)
+
+
 def stage(*paths: str):
     """Local intake, see the module docstring. Writes original.pdf plus a meta.json with
     `title` (the file stem), `original_file_name` (used as the upload name by apply) and
-    `source` (where the file came from)."""
+    `source` (where the file came from).
+
+    Without arguments it works on the consume/ folder, like Paperless's own consume directory:
+    every staged file is moved out of consume/ into its work/inbox/<key>/ folder (as
+    `source<ext>`, next to original.pdf), a file Paperless already has is moved to
+    work/consume-skipped/, and an unsupported type (e.g. .docx, .zip) is left where it is and
+    reported. Explicitly named files are only copied, never moved."""
     day = time.strftime("%Y%m%d")
-    for raw in paths:
-        src = Path(raw)
+    from_consume = not paths
+    sources = _consume_files() if from_consume else [Path(p) for p in paths]
+    if from_consume and not sources:
+        print(f"nothing to stage in {CONSUME}/")
+    for src in sources:
         if not src.is_file():
-            print(f"skip {raw}: no such file")
+            print(f"skip {src}: no such file")
             continue
-        existing = client.find_by_checksum(client.sha256_of(src))
-        if existing:
-            print(f"skip {src.name}: already in Paperless as document {existing[0]['id']} ('{existing[0]['title']}')")
-            continue
-        key = local_key(src, day)
-        folder = INBOX / key
-        n = 2
-        while folder.exists() and (folder / "meta.json").exists() and json.loads(
-            (folder / "meta.json").read_text(encoding="utf-8")
-        ).get("source") != str(src.resolve()):
-            folder = INBOX / f"{key}-{n}"  # same name staged from a different place the same day
-            n += 1
-        if (PROCESSED / folder.name / "ocr.uploaded.pdf").exists():
-            # The uploaded file is the OCR'd one, so the checksum lookup above can't catch this.
-            print(f"skip {src.name}: already uploaded from {folder.name} (see its ocr.uploaded.pdf marker)")
-            continue
-        folder.mkdir(parents=True, exist_ok=True)
-        dest = folder / "original.pdf"
-        if src.suffix.lower() == ".pdf":
-            shutil.copy(src, dest)
+        status, detail = _stage_one(src, day)
+        if status == "staged":
+            print(f"staged {detail.name} ({src.name})")
+            if from_consume:
+                shutil.move(str(src), detail / f"source{src.suffix.lower()}")
+        elif status == "exists":
+            print(f"skip {src.name}: already in Paperless as document {detail}")
+            if from_consume:
+                CONSUME_SKIPPED.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(src), CONSUME_SKIPPED / f"{time.strftime('%Y%m%d-%H%M%S')}_{src.name}")
+        elif status == "uploaded":
+            print(f"skip {src.name}: already uploaded from {detail} (see its ocr.uploaded.pdf marker)")
+            if from_consume:
+                CONSUME_SKIPPED.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(src), CONSUME_SKIPPED / f"{time.strftime('%Y%m%d-%H%M%S')}_{src.name}")
         else:
-            # Same reason as in fetch(): everything downstream only handles PDFs.
-            Image.open(src).convert("RGB").save(dest, "PDF")
-        meta = {"title": src.stem, "original_file_name": src.with_suffix(".pdf").name, "source": str(src.resolve())}
-        (folder / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
-        print(f"staged {folder.name} ({src.name})")
+            print(f"skip {src.name}: unsupported file type (supported: {', '.join(sorted(STAGE_SUFFIXES))})")
 
 
 def _duplicate_candidates(content: str, own_id=None) -> list[dict]:
@@ -553,8 +606,8 @@ if __name__ == "__main__":
         func(*(int(a) for a in sys.argv[2:]))
         sys.exit(0)
     wants_files = cmd in STAGES_WITH_FILES
-    if cmd not in STAGES or (len(sys.argv) < 3 if wants_files else len(sys.argv) != 2):
-        print(f"usage: python -m pipeline.cli <{'|'.join(STAGES)}|{'|'.join(tools.COMMANDS)}>  (stage takes FILE...)")
+    if cmd not in STAGES or (not wants_files and len(sys.argv) != 2):
+        print(f"usage: python -m pipeline.cli <{'|'.join(STAGES)}|{'|'.join(tools.COMMANDS)}>  (stage [FILE...], default: consume/)")
         sys.exit(1)
     _acquire_lock(cmd)
     try:

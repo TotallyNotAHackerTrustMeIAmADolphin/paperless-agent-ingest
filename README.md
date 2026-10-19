@@ -104,7 +104,7 @@ brew install tesseract tesseract-lang ghostscript poppler
 Manually, stage by stage:
 
 ```sh
-python -m pipeline.cli stage a.pdf scan.jpg   # optional: new files straight from disk, no raw upload
+python -m pipeline.cli stage      # new files from consume/ (or: stage a.pdf scan.jpg), no raw upload
 python -m pipeline.cli fetch      # inbox documents -> work/inbox/<id>/
 python -m pipeline.cli prepare    # fix, OCR, extract text, write the report
 python -m pipeline.cli report     # one block per document from that report

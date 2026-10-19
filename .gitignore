@@ -26,3 +26,8 @@ AGENT_HANDOFF.md
 LOCAL.md
 LOCAL_KNOWLEDGE.md
 LOCAL_LOG.md
+
+# consume/ is the drop folder for `python -m pipeline.cli stage` (like Paperless's consume
+# directory) and holds real documents while they wait - keep only the placeholder
+consume/*
+!consume/.gitkeep
