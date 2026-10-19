@@ -39,6 +39,11 @@ which tool when, what finished means. This section is the short version.
 `run_ingest.bat` / `run_ingest.sh` start an agent with `docs/playbook.md`; the same steps
 apply interactively.
 
+0. Files that are not in Paperless yet (mail attachments, a folder of scans) go in with
+   `python -m pipeline.cli stage FILE...` instead of being uploaded raw first: they land in
+   `work/inbox/local-YYYYMMDD-<name>/`, run through the same `prepare`, and `apply` uploads the
+   finished file once, classified (one version, original file name kept). Bytes Paperless
+   already has are skipped with the existing document id.
 1. `python -m pipeline.cli fetch` - downloads every untouched document into `work/inbox/<id>/`.
 2. `python -m pipeline.cli prepare` - blank-page/rotation fix, OCR, per-page text, report.
 3. `python -m pipeline.cli report` for the overview of `work/review/classification_report.json`,
@@ -187,8 +192,15 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
   re-OCRing a Tagged PDF only destroys its structure), `extract_text` (pymupdf per page,
   reading-order sorted, whitespace collapsed, a `--- Page N of M ---` line before every page;
   page N of `content.md` is index N-1 of `ocr.pdf`).
-- `cli.py` - three stages behind a per-stage lock file (`work/.stage.lock`, stale after 3 h;
+- `cli.py` - four stages behind a per-stage lock file (`work/.stage.lock`, stale after 3 h;
   the helper commands from `tools.py` are dispatched here without the lock):
+  - `stage FILE...`: local intake for files Paperless doesn't have yet. Checksum lookup first
+    (already there -> skip with the id), else `work/inbox/local-YYYYMMDD-<slug>/original.pdf`
+    (images converted to PDF) plus `meta.json` with `title`, `original_file_name`, `source`.
+    The key is never all digits, so `prepare` treats it as local (no live untouched check; it
+    skips the folder once `work/processed/<key>/ocr.uploaded.pdf` exists, otherwise a later
+    `apply` with the same classifications.json would upload it twice) and `apply` takes the
+    upload path (`primary is None`), passing `original_file_name` as the upload name.
   - `fetch`: `GET /api/documents/?is_in_inbox=true` plus a fallback query for documents with
     neither correspondent nor document_type (legacy uploads from before the inbox tag). Writes
     `work/inbox/<id>/original.pdf` and `meta.json` (metadata snapshot without `content`).

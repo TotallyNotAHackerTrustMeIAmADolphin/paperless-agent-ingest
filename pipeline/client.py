@@ -148,10 +148,13 @@ def upload_document(
     correspondent: int | None = None,
     document_type: int | None = None,
     created=None,
+    filename: str | None = None,
 ) -> str:
     """POST a file for consumption as a NEW document. Returns the task UUID; ingestion happens
     asynchronously, so poll `get_task` to find the resulting document id. To replace the file of
-    an existing document use `update_version` instead."""
+    an existing document use `update_version` instead. `filename` is what Paperless records as
+    `original_file_name` (default: the file's own name - for a processed `ocr.pdf` pass the
+    name the document arrived with, or every upload is called "ocr.pdf")."""
     data = {}
     if title:
         data["title"] = _clip(title, "title")
@@ -167,7 +170,7 @@ def upload_document(
         resp = session.post(
             _url("documents/post_document/"),
             data=data,
-            files={"document": (Path(file_path).name, f)},
+            files={"document": (filename or Path(file_path).name, f)},
         )
     resp.raise_for_status()
     return resp.json()  # task UUID string
