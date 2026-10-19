@@ -16,6 +16,7 @@ the chat.
 
 | Need | Use |
 |---|---|
+| Take in files that are not in Paperless yet (no raw upload first) | `stage FILE...` (P0) |
 | Pull untouched documents | `fetch` |
 | Fix, OCR, extract text, build the report | `prepare` |
 | Overview of the report, one block per document | `report` |
@@ -40,6 +41,21 @@ opened only when P6 or an oversized scan calls for it.
 
 Reading each `content.md` is a manual step and cannot be replaced by a command. Classification is
 your judgement, not a tool's.
+
+## P0 Local intake (files that are not in Paperless yet)
+
+Trigger: you are handed files directly (mail attachments, a scan folder) instead of finding
+them in the Paperless inbox.
+
+1. `stage FILE...` - one `local-YYYYMMDD-<name>` folder per new file; files Paperless already
+   has are reported with their document id and skipped.
+2. Continue with P1 from `prepare` (a `fetch` before or after is fine and picks up whatever
+   arrived in Paperless the normal way). Classify local entries like any other; their
+   `doc_id` is the folder key and they need no `source_doc_id`.
+3. `apply` uploads each local entry once, already classified, under its original file name.
+
+**Finished when:** every staged folder has an `ocr.uploaded.pdf` marker and its document id is
+reported to the user.
 
 ## P1 Normal ingest run
 

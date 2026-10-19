@@ -1,6 +1,13 @@
 """Orchestrates the pipeline stages. Run as `python -m pipeline.cli <stage>`.
 
 Stages:
+  stage FILE...
+           - local intake: copy files that are NOT in Paperless yet (mail attachments, scans
+             from a folder) into work/inbox/<key>/original.pdf with a non-numeric key
+             (`local-YYYYMMDD-<name>`), so prepare/apply process them like fetched documents and
+             apply uploads the finished, classified file once - no upload-download round trip,
+             no raw first version in Paperless. Files whose bytes Paperless already has are
+             skipped with the existing document id.
   fetch    - download every untouched Paperless document (still carrying an inbox tag, or - as a
              fallback for pre-inbox-tag legacy uploads - having neither correspondent nor
              document_type) into work/inbox/<id>/original.pdf, next to a meta.json snapshot of
@@ -98,6 +105,58 @@ def fetch():
     print(f"{n} untouched document(s) in Paperless")
 
 
+LOCAL_PREFIX = "local-"
+
+
+def local_key(path: Path, day: str) -> str:
+    """Folder key for a locally staged file: `local-<day>-<slug of the file stem>`. Never all
+    digits, which is what keeps prepare()/apply() from mistaking it for a Paperless id."""
+    import re
+    import unicodedata
+
+    stem = unicodedata.normalize("NFKD", Path(path).stem).encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^A-Za-z0-9]+", "-", stem).strip("-").lower()[:40].strip("-") or "file"
+    return f"{LOCAL_PREFIX}{day}-{slug}"
+
+
+def stage(*paths: str):
+    """Local intake, see the module docstring. Writes original.pdf plus a meta.json with
+    `title` (the file stem), `original_file_name` (used as the upload name by apply) and
+    `source` (where the file came from)."""
+    day = time.strftime("%Y%m%d")
+    for raw in paths:
+        src = Path(raw)
+        if not src.is_file():
+            print(f"skip {raw}: no such file")
+            continue
+        existing = client.find_by_checksum(client.sha256_of(src))
+        if existing:
+            print(f"skip {src.name}: already in Paperless as document {existing[0]['id']} ('{existing[0]['title']}')")
+            continue
+        key = local_key(src, day)
+        folder = INBOX / key
+        n = 2
+        while folder.exists() and (folder / "meta.json").exists() and json.loads(
+            (folder / "meta.json").read_text(encoding="utf-8")
+        ).get("source") != str(src.resolve()):
+            folder = INBOX / f"{key}-{n}"  # same name staged from a different place the same day
+            n += 1
+        if (PROCESSED / folder.name / "ocr.uploaded.pdf").exists():
+            # The uploaded file is the OCR'd one, so the checksum lookup above can't catch this.
+            print(f"skip {src.name}: already uploaded from {folder.name} (see its ocr.uploaded.pdf marker)")
+            continue
+        folder.mkdir(parents=True, exist_ok=True)
+        dest = folder / "original.pdf"
+        if src.suffix.lower() == ".pdf":
+            shutil.copy(src, dest)
+        else:
+            # Same reason as in fetch(): everything downstream only handles PDFs.
+            Image.open(src).convert("RGB").save(dest, "PDF")
+        meta = {"title": src.stem, "original_file_name": src.with_suffix(".pdf").name, "source": str(src.resolve())}
+        (folder / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+        print(f"staged {folder.name} ({src.name})")
+
+
 def _duplicate_candidates(content: str, own_id=None) -> list[dict]:
     """Cheap duplicate/partial-rescan hint: pull a handful of the longer, less-generic words
     out of the extracted text and run them through Paperless's own full-text search. Only
@@ -193,6 +252,15 @@ def prepare():
             if meta is None:
                 print(f"skip {doc_id}: no longer in Paperless (already processed)")
                 continue
+        else:
+            # A local folder has no live Paperless state to check against; its "done" signal is
+            # apply()'s upload marker. Without this, every later prepare would rebuild ocr.pdf
+            # and the next apply with the same classifications.json would upload it again.
+            if (PROCESSED / name / "ocr.uploaded.pdf").exists():
+                continue
+            meta_path = doc_dir / "meta.json"
+            if meta_path.exists():
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
 
         # Everything that touches the file stays inside this try: one bad document (corrupt/
         # encrypted PDF, an all-blank scan the BLANK_INK_THRESHOLD heuristic can't explain, ...)
@@ -233,10 +301,11 @@ def prepare():
         report.append(
             {
                 "doc_id": doc_id,
-                "original_title": meta["title"] if meta else name,
+                "original_title": meta.get("title", name) if meta else name,
                 # Paperless's own date guess - any date-shaped string in the text can fool it
                 # (birthdates, cited law dates). Check against the document's printed date.
-                "created_guess": meta["created"] if meta else None,
+                # Locally staged files have none.
+                "created_guess": meta.get("created") if meta else None,
                 "pages_before": original_pages,
                 "pages_kept": pages_kept,
                 # Page numbers below are 0-indexed against the ORIGINAL file; content.md and
@@ -359,7 +428,12 @@ def apply():
             fields = _resolve_fields(entry)
 
             if is_split or primary is None:
-                task_id = client.upload_document(ocr_pdf, **fields)
+                # A locally staged file (see stage()) keeps the name it arrived with.
+                local_meta = INBOX / str(doc_id) / "meta.json"
+                upload_name = None
+                if primary is None and local_meta.exists():
+                    upload_name = json.loads(local_meta.read_text(encoding="utf-8")).get("original_file_name")
+                task_id = client.upload_document(ocr_pdf, filename=upload_name, **fields)
                 new_doc_id = _wait_for_task(task_id)
                 success = new_doc_id is not None
                 if success:
@@ -431,7 +505,8 @@ def _wait_for_task(task_id: str, timeout_s: int = 180):
     return int(related) if related is not None else None
 
 
-STAGES = {"fetch": fetch, "prepare": prepare, "apply": apply}
+STAGES = {"stage": stage, "fetch": fetch, "prepare": prepare, "apply": apply}
+STAGES_WITH_FILES = {"stage"}
 
 LOCK_FILE = Path("work/.stage.lock")
 LOCK_STALE_S = 3 * 3600
@@ -477,11 +552,12 @@ if __name__ == "__main__":
             sys.exit(1)
         func(*(int(a) for a in sys.argv[2:]))
         sys.exit(0)
-    if len(sys.argv) != 2 or cmd not in STAGES:
-        print(f"usage: python -m pipeline.cli <{'|'.join(STAGES)}|{'|'.join(tools.COMMANDS)}>")
+    wants_files = cmd in STAGES_WITH_FILES
+    if cmd not in STAGES or (len(sys.argv) < 3 if wants_files else len(sys.argv) != 2):
+        print(f"usage: python -m pipeline.cli <{'|'.join(STAGES)}|{'|'.join(tools.COMMANDS)}>  (stage takes FILE...)")
         sys.exit(1)
     _acquire_lock(cmd)
     try:
-        STAGES[cmd]()
+        STAGES[cmd](*sys.argv[2:])
     finally:
         LOCK_FILE.unlink(missing_ok=True)
