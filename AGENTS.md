@@ -125,7 +125,9 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
 ## 4. Pipeline reference (`pipeline/`)
 
 - `config.py` - `PAPERLESS_URL`, `PAPERLESS_TOKEN`, `OCR_LANGUAGES` from `.env`. Nothing else
-  reads `os.environ`.
+  reads `os.environ`. Without `PAPERLESS_TOKEN` in the environment the token comes from the OS
+  credential store (`keyring`, service `paperless-agent-ingest`, user = `PAPERLESS_URL`), filled
+  by the owner with `python -m pipeline.store_token` (hidden input, tested before saving).
 - `client.py` - the only HTTP code. Pins `Accept: application/json; version=10`
   (`API_VERSION`), sets a (10 s, 300 s) timeout, retries GET/PATCH/DELETE on 502-504 but never
   POST (a retried upload after a dropped response creates a duplicate). Functions:
@@ -300,7 +302,8 @@ sources.
 See `README.md` for the full install. Points that bite agents:
 
 - `.env` holds `PAPERLESS_URL`, `PAPERLESS_TOKEN`, optionally `OCR_LANGUAGES`. Never print,
-  commit or copy the token anywhere.
+  commit or copy the token anywhere. In a checkout inside a synced cloud folder, keep the token
+  out of `.env` and in the credential store instead (`pipeline.store_token`, see section 4).
 - `ocrmypdf` needs Tesseract (with the `osd` language pack plus every language in
   `OCR_LANGUAGES`), Ghostscript and poppler (`pdftoppm`) on `PATH`. On Windows, `TESSDATA_PREFIX`
   must point at a folder that also contains Tesseract's `configs` and `tessconfigs`

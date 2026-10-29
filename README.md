@@ -96,8 +96,18 @@ brew install tesseract tesseract-lang ghostscript poppler
 | Variable          | Meaning                                                    |
 |-------------------|------------------------------------------------------------|
 | `PAPERLESS_URL`   | Base URL of the instance, no trailing slash                |
-| `PAPERLESS_TOKEN` | API token                                                  |
+| `PAPERLESS_TOKEN` | API token (optional, see below)                            |
 | `OCR_LANGUAGES`   | Tesseract language string for ocrmypdf, default `deu+eng`  |
+
+`.env` is plain text. If the checkout lives in a synced folder (Nextcloud, OneDrive, Dropbox,
+...), the token gets uploaded with it. Keep it in the OS credential store instead (Windows
+Credential Manager, macOS Keychain, Secret Service) and leave `PAPERLESS_TOKEN` empty:
+
+```sh
+python -m pipeline.store_token   # hidden input, tests the token, then stores it
+```
+
+`PAPERLESS_TOKEN` in the environment still takes precedence when set.
 
 ## Running an ingest
 
