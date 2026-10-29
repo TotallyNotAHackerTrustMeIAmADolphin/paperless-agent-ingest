@@ -2,6 +2,7 @@
 import io
 from pathlib import Path
 
+import numpy as np
 import pikepdf
 import pymupdf
 import pytesseract
@@ -149,17 +150,68 @@ def assemble_pages(
     return out_path
 
 
+def content_bbox(
+    image: Image.Image,
+    region: tuple[int, int, int, int] | None = None,
+    background: tuple[int, int, int] | None = None,
+    tolerance: int = 40,
+    min_pixels: int = 2,
+    pad: int = 0,
+) -> tuple[int, int, int, int] | None:
+    """Pixel box (left, top, right, bottom; right/bottom exclusive, as PIL's `crop` takes it)
+    around everything in `image` that is not background, or None if there is nothing.
+
+    Measured instead of guessed: a pixel is content when any RGB channel differs from
+    `background` by more than `tolerance`. `background` defaults to the most common colour of
+    the searched area, which is the paper of a scan and the canvas of a screenshot (white or a
+    dark theme alike). A row or column counts only if it holds at least `min_pixels` content
+    pixels, so scanner dust and JPEG noise do not stretch the box. `region` (pixel box) limits
+    the search, e.g. to skip a window's title bar and toolbar, which are content too; the result
+    is still in whole-image pixels. `pad` adds a margin, clamped to the image."""
+    rgb = np.asarray(image.convert("RGB"), dtype=np.int16)
+    x0, y0 = 0, 0
+    if region is not None:
+        x0, y0, x1, y1 = region
+        rgb = rgb[y0:y1, x0:x1]
+    if rgb.size == 0:
+        return None
+    if background is None:
+        colours, counts = np.unique(rgb.reshape(-1, 3), axis=0, return_counts=True)
+        background = tuple(int(c) for c in colours[counts.argmax()])
+    content = (np.abs(rgb - np.array(background, dtype=np.int16)) > tolerance).any(axis=2)
+    rows = np.nonzero(content.sum(axis=1) >= min_pixels)[0]
+    cols = np.nonzero(content.sum(axis=0) >= min_pixels)[0]
+    if rows.size == 0 or cols.size == 0:
+        return None
+    width, height = image.size
+    return (
+        max(0, x0 + int(cols[0]) - pad),
+        max(0, y0 + int(rows[0]) - pad),
+        min(width, x0 + int(cols[-1]) + 1 + pad),
+        min(height, y0 + int(rows[-1]) + 1 + pad),
+    )
+
+
+def crop_to_content(image: Image.Image, **kwargs) -> Image.Image:
+    """Crop `image` to `content_bbox(image, **kwargs)`; an image without content comes back
+    unchanged rather than as an empty crop."""
+    box = content_bbox(image, **kwargs)
+    return image.crop(box) if box else image
+
+
 def crop_page(
     pdf_path: Path,
     page_number: int,
-    box: tuple[float, float, float, float],
+    box: tuple[float, float, float, float] | str,
     rotate: int = 0,
     dpi: int = 300,
 ) -> Image.Image:
     """Render one page and crop+rotate it in raster space. `box` is (left, top, right, bottom)
     as fractions of the rendered page (0..1 each) rather than pixels or points, so a caller can
-    say "left half" as (0, 0, 0.5, 1) without knowing the page's pixel size. `rotate` is
-    clockwise degrees applied after the crop (same convention as `fix_pdf`/`assemble_pages`).
+    say "left half" as (0, 0, 0.5, 1) without knowing the page's pixel size. `box="content"`
+    crops to whatever is on the page (`crop_to_content`, default settings) instead, so nobody
+    has to guess a box just to drop empty margins. `rotate` is clockwise degrees applied after
+    the crop (same convention as `fix_pdf`/`assemble_pages`).
 
     For recovering multiple logical A4 pages out of one oversized (A3) scan: a scanner fed at
     the wrong tray size, or a folded certificate/booklet scanned open flat, produces one large
@@ -170,11 +222,14 @@ def crop_page(
     and re-OCRing each result with `pipeline.ocr.run_ocr` (see `build_pdf_from_images`) gives
     each output page a text layer scoped to only what is actually on it."""
     image = render_page(pdf_path, page_number, dpi=dpi)
-    width, height = image.size
-    left, top, right, bottom = box
-    cropped = image.crop(
-        (round(left * width), round(top * height), round(right * width), round(bottom * height))
-    )
+    if box == "content":
+        cropped = crop_to_content(image)
+    else:
+        width, height = image.size
+        left, top, right, bottom = box
+        cropped = image.crop(
+            (round(left * width), round(top * height), round(right * width), round(bottom * height))
+        )
     if rotate:
         cropped = cropped.rotate(-rotate, expand=True)  # PIL rotates counterclockwise for +angle
     return cropped

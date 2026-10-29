@@ -5,7 +5,7 @@ Read on demand, when P3 or P6 in the ingest playbook sends you here. The tool ma
 `docs/playbook.md`; why each helper behaves as it does is in its docstring.
 
 The rule behind all of it: **never guess coordinates.** Find them (label search, gridline
-detection, measured text width), place, render, look, adjust.
+detection, content bounding box, measured text width), place, render, look, adjust.
 
 Work on copies under `work/qa/<id>/` (gitignored). The original stays in Paperless as a version
 after upload.
@@ -40,6 +40,12 @@ do not draw values that lack an appearance stream.
    layer covers only what is on it. A media-box crop alone leaves the other half's words in the
    content stream.
 3. Render the result: reading order right, nothing cut off.
+
+Only the split between logical pages is a decision. To drop empty margins around what is on a
+page or image (a receipt on a large platen, a figure, a screenshot with a lot of empty canvas)
+use `crop_page(..., box="content")` or `content_bbox` / `crop_to_content` on a PIL image instead
+of guessing a box. On screenshots pass `region` to skip window chrome (title bar, toolbars),
+which also counts as content; raise `min_pixels` if specks still stretch the box.
 
 ## P13 Reorder, drop, rotate, split, merge
 

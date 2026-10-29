@@ -25,6 +25,7 @@ the chat.
 | Split, reorder, merge pages | `pipeline.pdf_tools`: `split_pdf`, `assemble_pages`, `merge_pdfs` |
 | Look at a page | `pdf_tools.render_page`, `form_fill.preview`, then Read the PNG |
 | Crop part of a page, rebuild a PDF from crops, give it a text layer | `pdf_tools.crop_page`, `build_pdf_from_images`, `ocr.run_ocr` |
+| Crop a page or image to its content, without guessing a box | `pdf_tools.crop_page(box="content")`, `content_bbox`, `crop_to_content` |
 | Find a printed label on a page | `form_fill.find_label` |
 | Find a scanned table's gridlines | `form_fill.detect_row_lines`, `detect_col_lines` |
 | Put a value into a known cell | `form_fill.fill_centered` |
