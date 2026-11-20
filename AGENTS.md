@@ -128,8 +128,8 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
   `PAPERLESS_URL_LOCAL` if its port answers, else `PAPERLESS_URL_REMOTE`; token = `PAPERLESS_TOKEN`
   env var, else the OS keyring (`python -m pipeline.set_token`). Nothing else reads `os.environ`.
 - `preflight.py` - runs before the agent session (`run_ingest.*` call it): picks the URL, checks the
-  token, runs `fetch` + `prepare`, starts the agent with the findings in its prompt, or not at all
-  when 0 documents are untouched. New startup checks belong here, not in the agent's prompt.
+  token, runs `fetch` + `prepare`, starts the agent with the findings in its prompt, or with no
+  prompt (an empty session for questions) when 0 documents are untouched. New startup checks belong here, not in the agent's prompt.
 - `client.py` - the only HTTP code. Pins `Accept: application/json; version=10`
   (`API_VERSION`), sets a (10 s, 300 s) timeout, retries GET/PATCH/DELETE on 502-504 but never
   POST (a retried upload after a dropped response creates a duplicate). Functions:

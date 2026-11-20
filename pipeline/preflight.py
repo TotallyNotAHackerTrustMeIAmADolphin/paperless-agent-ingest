@@ -5,7 +5,7 @@ connection checks, `fetch` and `prepare`.
 Usage: python -m pipeline.preflight [--dry-run]   (agent command: $AGENT, default `claude`)
 
 Picks local vs. remote Paperless URL, checks the token, runs `stage`, `fetch`, then `prepare`. With 0
-untouched documents it exits without starting the agent. Exit codes: 0 done/started, 2 setup
+untouched documents it starts the agent without a prompt (an empty session for questions). Exit codes: 0 done/started, 2 setup
 problem (URL, token, unreachable), 3 a stage failed.
 """
 import os
@@ -23,6 +23,12 @@ def _stage(name: str) -> tuple[int, str]:
                        encoding="utf-8", errors="replace", env={**os.environ, "PYTHONIOENCODING": "utf-8"})
     print(r.stdout + r.stderr, end="")
     return r.returncode, r.stdout
+
+
+def _agent(*prompt: str) -> int:
+    agent = shlex.split(os.environ.get("AGENT", "claude"))
+    agent[0] = shutil.which(agent[0]) or agent[0]  # claude is claude.cmd on Windows
+    return subprocess.call(agent + list(prompt))
 
 
 def main() -> int:
@@ -52,8 +58,8 @@ def main() -> int:
         return 3
     n = int(m.group(1))
     if n == 0 and not staged:
-        print("preflight: 0 untouched documents, nothing to do, agent not started")
-        return 0
+        print("preflight: 0 untouched documents, nothing to do, starting an empty agent session")
+        return 0 if "--dry-run" in sys.argv else _agent()
     docs = re.findall(r"^(?:fetched|exists) +(\d+)(?: \((.*)\))?$", out, re.M)
 
     rc, pout = _stage("prepare")
@@ -70,9 +76,7 @@ def main() -> int:
     if "--dry-run" in sys.argv:
         print(prompt)
         return 0
-    agent = shlex.split(os.environ.get("AGENT", "claude"))
-    agent[0] = shutil.which(agent[0]) or agent[0]  # claude is claude.cmd on Windows
-    return subprocess.call(agent + [prompt])
+    return _agent(prompt)
 
 
 if __name__ == "__main__":
