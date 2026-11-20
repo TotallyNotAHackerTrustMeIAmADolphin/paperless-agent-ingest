@@ -124,8 +124,12 @@ payroll exports and multi-copy onboarding packets are the recurring bundle cases
 
 ## 4. Pipeline reference (`pipeline/`)
 
-- `config.py` - `PAPERLESS_URL`, `PAPERLESS_TOKEN`, `OCR_LANGUAGES` from `.env`. Nothing else
-  reads `os.environ`.
+- `config.py` - `OCR_LANGUAGES` from `.env`; URL = `PAPERLESS_URL` override, else
+  `PAPERLESS_URL_LOCAL` if its port answers, else `PAPERLESS_URL_REMOTE`; token = `PAPERLESS_TOKEN`
+  env var, else the OS keyring (`python -m pipeline.set_token`). Nothing else reads `os.environ`.
+- `preflight.py` - runs before the agent session (`run_ingest.*` call it): picks the URL, checks the
+  token, runs `fetch` + `prepare`, starts the agent with the findings in its prompt, or not at all
+  when 0 documents are untouched. New startup checks belong here, not in the agent's prompt.
 - `client.py` - the only HTTP code. Pins `Accept: application/json; version=10`
   (`API_VERSION`), sets a (10 s, 300 s) timeout, retries GET/PATCH/DELETE on 502-504 but never
   POST (a retried upload after a dropped response creates a duplicate). Functions:
@@ -299,8 +303,8 @@ sources.
 
 See `README.md` for the full install. Points that bite agents:
 
-- `.env` holds `PAPERLESS_URL`, `PAPERLESS_TOKEN`, optionally `OCR_LANGUAGES`. Never print,
-  commit or copy the token anywhere.
+- `.env` holds `PAPERLESS_URL_LOCAL`/`PAPERLESS_URL_REMOTE`, optionally `OCR_LANGUAGES`. The token
+  lives in the OS keyring, never in `.env`. Never print, commit or copy the token anywhere.
 - `ocrmypdf` needs Tesseract (with the `osd` language pack plus every language in
   `OCR_LANGUAGES`), Ghostscript and poppler (`pdftoppm`) on `PATH`. On Windows, `TESSDATA_PREFIX`
   must point at a folder that also contains Tesseract's `configs` and `tessconfigs`

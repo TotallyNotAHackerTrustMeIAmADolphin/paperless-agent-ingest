@@ -62,7 +62,9 @@ reported to the user.
 
 ## P1 Normal ingest run
 
-1. Read `LOCAL.md` and `LOCAL_KNOWLEDGE.md`. `stage` (picks up `consume/`, see P0), `fetch`, then `prepare`. `prepare` skips folders that are no longer untouched, that is normal.
+1. Read `LOCAL.md` and `LOCAL_KNOWLEDGE.md`. If the prompt says preflight already ran, `stage`,
+   `fetch` and `prepare` are done: go to step 2. Otherwise run `stage` (picks up `consume/`, see
+   P0), `fetch`, then `prepare` (it skips folders that are no longer untouched, that is normal).
 2. `report` for the overview, then read every `work/processed/<id>/content.md` in full.
 3. Per document decide: title, correspondent, type, tags, date (`AGENTS.md` section 3). Check
    every document for bundle, order, missing pages, duplicate (P2 to P4).

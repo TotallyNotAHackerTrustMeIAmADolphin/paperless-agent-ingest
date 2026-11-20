@@ -54,7 +54,8 @@ cd paperless-agent-ingest
 python -m venv .venv
 . .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env            # fill in PAPERLESS_URL and PAPERLESS_TOKEN
+cp .env.example .env            # fill in the URL(s), then:
+python -m pipeline.set_token    # API token into the OS keyring, not into .env
 cp LOCAL.md.example LOCAL.md                     # optional: your instance's conventions
 cp LOCAL_KNOWLEDGE.md.example LOCAL_KNOWLEDGE.md # optional: your correspondents/patterns
 cp LOCAL_LOG.md.example LOCAL_LOG.md             # optional: incident log, read on demand only
@@ -95,8 +96,10 @@ brew install tesseract tesseract-lang ghostscript poppler
 
 | Variable          | Meaning                                                    |
 |-------------------|------------------------------------------------------------|
-| `PAPERLESS_URL`   | Base URL of the instance, no trailing slash                |
-| `PAPERLESS_TOKEN` | API token                                                  |
+| `PAPERLESS_URL_LOCAL`  | LAN base URL, used when its port answers (no trailing slash) |
+| `PAPERLESS_URL_REMOTE` | Fallback base URL when the local one does not answer    |
+| `PAPERLESS_URL`   | Optional override of both (preflight sets it for child processes) |
+| `PAPERLESS_TOKEN` | Optional, headless only; normally the token is in the OS keyring (`python -m pipeline.set_token`) and wins last |
 | `OCR_LANGUAGES`   | Tesseract language string for ocrmypdf, default `deu+eng`  |
 
 ## Running an ingest

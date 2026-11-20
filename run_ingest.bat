@@ -1,6 +1,7 @@
 @echo off
-rem Starts an unattended ingest run with Claude Code. For another agent, see run_ingest.sh.
+rem Starts an unattended ingest run. pipeline.preflight checks the connection, runs fetch + prepare and
+rem only then starts the agent (default claude, override with AGENT) with the findings in its prompt.
 cd /d "%~dp0"
 call ".venv\Scripts\activate.bat"
-claude "Read docs/playbook.md and carry out the ingest run it describes (P1), completely."
+python -m pipeline.preflight
 pause
